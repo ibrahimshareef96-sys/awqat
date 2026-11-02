@@ -33,6 +33,12 @@ you need it. Each count has a tap ring, and the tasbih goes to a hundred.
 typed" below). Pages turn like a book's, with notes on an ayah or a page, a bookmark that follows your reading, a
 daily goal, and a muraja'ah (revision) plan by juz. The whole mushaf can be downloaded for offline reading.
 
+**Recite.** Tap the microphone in the mushaf, recite three or four words of any ayah, and its page opens with the ayah
+lit. Or tap Memorise under a page: its words go blank, keeping their places, and fill in as you recite; a word heard as
+another, or skipped, is marked, and the slips can be kept for revision. A Quran speech model runs on the phone after a
+one-time download of about 46 MB, and nothing you recite leaves it. Words are checked, not tajweed. How it works:
+[docs/recitation.md](docs/recitation.md).
+
 **Learning.** Tracks for Tafsir, Hadith and Fiqh to start with, plus any of your own, each with a weekly target, a
 study timer, lessons to review, and a window after the prayer you choose.
 
@@ -63,13 +69,25 @@ dhikr is an ayah (Ayat al-Kursi, the last three surahs), the app opens that page
 You need Node 22 or newer. For Android, JDK 21 and the Android SDK. For iPhone and iPad, a Mac with Xcode.
 
 ```bash
+git clone https://github.com/ibrahimshareef96-sys/awqat.git
+cd awqat
 npm ci
-npm test          # 1,250+ tests, run on the Asia/Dubai clock so the expected prayer times hold
+npm test          # 1,300+ tests, run on the Asia/Dubai clock so the expected prayer times hold
 npm run build
 npx cap sync
 ```
 
-Then open `android/` in Android Studio, or `ios/App/App.xcodeproj` in Xcode, and run it on a device.
+Then open `android/` in Android Studio, or `ios/App/App.xcodeproj` in Xcode, and run it on a device. From the command
+line, `npm run apk` builds a debug APK in `android/app/build/outputs/apk/debug/`.
+
+If something does not build: `npm ci` again after changing branches; JDK 21 must be the one Gradle finds
+(`./gradlew --version`); in Xcode, set your own team on both targets before running on a device.
+
+### Working with a coding agent
+
+Point Claude Code, Codex or any agent at [AGENTS.md](AGENTS.md) first (Claude Code reads it through
+[CLAUDE.md](CLAUDE.md) on its own). It holds the ground rules, the commands, the layout of the code and the steps for
+adding a feature, so an agent can make a change that keeps what Awqat promises.
 
 Before you publish a build of your own, change the app id `app.awqat` (in `capacitor.config.ts`,
 `android/app/build.gradle` and the Xcode project) and the iOS App Group `group.app.awqat`, and set your own Apple
@@ -84,8 +102,9 @@ Settings that live in `.env.local` (see `.env.example`):
 ## Privacy
 
 Out of the box Awqat talks to no server of its own. It reaches public services only for what you ask of it: Quran
-Foundation for the mushaf's fonts and words, Open Library when you scan or look up a book, and the calendar addresses
-you add. Your location is rounded to about a kilometre and stays on the phone, unless you use Talk, which sends it to
+Foundation for the mushaf's fonts and words, Open Library when you scan or look up a book, the calendar addresses you
+add, and, when you first use recitation, Hugging Face and the Tanzil Project for the speech model and the Quran text.
+Your voice is heard on the phone and never sent anywhere. Your location is rounded to about a kilometre and stays on the phone, unless you use Talk, which sends it to
 Open-Meteo for the weather. Health data is only read; today's step count is kept for the widget. The details are in
 [public/privacypolicy.html](public/privacypolicy.html). If you publish a build with Talk or sync turned on, update the
 iOS privacy manifests (`PrivacyInfo.xcprivacy`) to match.
@@ -95,14 +114,17 @@ iOS privacy manifests (`PrivacyInfo.xcprivacy`) to match.
 Prayer times by adhan-js (MIT). Morning and evening adhkar from Seen Arabic's
 [Morning-And-Evening-Adhkar-DB](https://github.com/Seen-Arabic/Morning-And-Evening-Adhkar-DB) (MIT), from Hisn
 al-Muslim. Quran fonts provided by [Quran Foundation](https://quran.foundation), in the King Fahd Complex's script.
-Quran metadata from the [Tanzil Project](https://tanzil.net). Type: Instrument Serif (SIL OFL 1.1). Weather from
+Quran metadata, and the text recitation matches against, from the [Tanzil Project](https://tanzil.net). The Quran
+speech model is [Tarteel AI](https://tarteel.ai)'s Whisper Tiny for Quran (Apache-2.0), run with transformers.js and
+ONNX Runtime. Type: Instrument Serif (SIL OFL 1.1). Weather from
 [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Book data from [Open Library](https://openlibrary.org).
 Full notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## How it was made
 
-Awqat started as one person's private app, built with AI coding agents (Claude Code), then reviewed by Codex and Kimi
-before release for anything personal, anything licensed, and anything a stranger would trip on. What is planned next
+Awqat is built by [Itqan Studio](https://itqanstudio.com). It started as one person's private app, built with AI coding
+agents (Claude Code), then reviewed by Codex and Kimi before release for anything personal, anything licensed, and
+anything a stranger would trip on. What is planned next
 is in [ROADMAP.md](ROADMAP.md).
 
 ## Licence
