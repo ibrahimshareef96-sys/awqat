@@ -8,7 +8,7 @@
 import { isNative } from "../device.ts";
 import {
   adhkarCollection, bodyCollection, fridayCollection, learnCollection, modesCollection, moneyCollection, murajaahCollection, mushafCollection,
-  prayerCollection, quranCollection,
+  prayerCollection, quranCollection, reviewsCollection,
 } from "../sync/collections.ts";
 import {
   acknowledge, applyReply, joinPages, kindsOf, outgoing, postRecords, stampSaved, startFresh, type Collection,
@@ -20,6 +20,7 @@ import { seedLearn } from "../learn/seed.ts";
 import { KEYS, write } from "../store.ts";
 import { clearSession, sessionToken } from "../talk/session.ts";
 import { workerUrl } from "../voice.ts";
+import { keepReviewDraft } from "./reviewActions.ts";
 import { hooks, state } from "./state.ts";
 
 /** Changes come in runs (dhikr after dhikr): a sync goes once they have paused this long, and the gap is kept. */
@@ -35,7 +36,8 @@ const UNREADABLE = "Some records on this device could not be read, so syncing wa
 const NOTHING_SENT: Wire = { cursor: 0, records: [], removed: [] };
 
 const COLLECTIONS: readonly Collection[] = [prayerCollection, quranCollection, adhkarCollection, fridayCollection,
-  mushafCollection, murajaahCollection, learnCollection, modesCollection, moneyCollection, bodyCollection] as readonly Collection[];
+  mushafCollection, murajaahCollection, learnCollection, modesCollection, moneyCollection, bodyCollection,
+  reviewsCollection] as readonly Collection[];
 const KINDS = kindsOf(COLLECTIONS);
 
 /** Each synced store key's value in the app's state, and how a value from another device is put back. */
@@ -50,6 +52,7 @@ const ACCESS: Readonly<Record<string, { get: () => unknown; set: (value: never) 
   [KEYS.modes]: { get: () => state.modes, set: (v) => { state.modes = v; } },
   [KEYS.money]: { get: () => state.money, set: (v) => { state.money = v; } },
   [KEYS.body]: { get: () => state.body, set: (v) => { state.body = v; } },
+  [KEYS.reviews]: { get: () => state.reviews, set: (v) => { state.reviews = v; } },
 };
 
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -88,9 +91,9 @@ export function recordSaved(key: string, value: unknown): void {
       state.learnSeedOnly = false;
       base = stampSaved(learnCollection, seedLearn(), base, 1);
     }
-    // Money and Body are put in state before they are saved, so state is the newer: a sync that landed during the save is
-    // in it, and stamping the older value would mark what arrived as removed, on every device.
-    const current = key === KEYS.money || key === KEYS.body ? ACCESS[key].get() : value;
+    // Money, Body and the reviews are put in state before they are saved, so state is the newer: a sync that landed during
+    // the save is in it, and stamping the older value would mark what arrived as removed, on every device.
+    const current = key === KEYS.money || key === KEYS.body || key === KEYS.reviews ? ACCESS[key].get() : value;
     const next = stampSaved(collection, current, base, Date.now());
     if (next === state.recordsSync) return;
     state.recordsSync = next;
@@ -158,9 +161,12 @@ async function syncOnce(send?: Post): Promise<void> {
     // State first, all at once and before any wait, so a save made meanwhile is stamped on top of it, never under it.
     const bookmarkBefore = state.mushaf.lastPageAt;
     for (const [key, value] of applied.values) {
+      // What is typed in this week's review, and not kept yet, is held before the week it was typed over changes.
+      if (key === KEYS.reviews) keepReviewDraft();
       ACCESS[key].set(value as never);
       if (key === KEYS.learn) state.learnSeedOnly = false;
-      if (key === KEYS.log || key === KEYS.adhkar || key === KEYS.friday) reminders = true;
+      // A week reviewed on another device needs no review reminder here.
+      if (key === KEYS.log || key === KEYS.adhkar || key === KEYS.friday || key === KEYS.reviews) reminders = true;
     }
     state.recordsSync = applied.sync;
     // The mushaf's bookmark itself came from another device (not a mark or note beside it): the open reader may follow.
@@ -178,7 +184,7 @@ async function syncOnce(send?: Post): Promise<void> {
     done = !pending() || (wire.records.length === 0 && wire.removed.length === 0 && !listening);
   }
   show(done ? { state: "synced", at: new Date() } : { state: "partial" });
-  // A prayer, the adhkar or the Friday routine marked elsewhere changes what the reminders here should say.
+  // A prayer, the adhkar, the Friday routine or a review marked elsewhere changes what the reminders here should say.
   if (reminders) await hooks.reschedule();
 }
 

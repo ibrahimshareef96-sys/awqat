@@ -25,6 +25,8 @@ import type { AdhkarLog, AdhkarWindow } from "../faith/adhkar.ts";
 import { faithAdhkarCard, homeAdhkarCard } from "./adhkarView.ts";
 import { homeLearnCard } from "./learnView.ts";
 import type { Learn } from "../learn/learn.ts";
+import type { Intention } from "../review/muhasabah.ts";
+import { homeWeekCard, reviewReminderFields } from "./reviewView.ts";
 import { BUILT_IN_WORKER } from "../voice.ts";
 
 export interface ViewModel {
@@ -67,6 +69,8 @@ export interface ViewModel {
   records: string;
   /** Why the coordinates typed in Settings were not taken, shown inside that form; "" when they were. */
   placeError: string;
+  /** The intentions set in the last Weekly Review, for Home, while they are for this week (review/muhasabah.ts). */
+  week: { week: string; intentions: readonly Intention[] } | null;
 }
 
 const SUNNAH_LABEL: Readonly<Record<Sunnah, string>> = { duha: "Duha", witr: "Witr", night: "Night" };
@@ -147,7 +151,7 @@ export function homeView(v: ViewModel): string {
     `<button type="button" class="card link next" data-go="faith"><span class="col"><span class="label">NEXT PRAYER</span>` +
     `<span class="numeral">${esc(prayerName(next.name, nextDate))} <span class="soft">${time(v, next.at)}</span></span></span>` +
     `<span class="col end">${prayerDots(v)}<span class="small">${done} of 5 today${until ? ` · ${until}` : ""}</span>` +
-    `</span></button>${homeAdhkarCard(adhkarModel(v))}${homeAgendaCard(v.agenda)}${homeQuranCard(v)}${readingCard(v)}` +
+    `</span></button>${homeAdhkarCard(adhkarModel(v))}${homeWeekCard(v.week)}${homeAgendaCard(v.agenda)}${homeQuranCard(v)}${readingCard(v)}` +
     homeLearnCard(v.learn, v.date) + homeBodyCard(v.body) +
     `<nav class="quiet-row" aria-label="More of your OS">${homeLinks(v.worker).map(([go, title]) =>
       `<button type="button" class="quiet" data-go="${go}">${title}</button>`).join("")}</nav></main>` +
@@ -311,7 +315,8 @@ function voiceCard(v: ViewModel): string {
     : `<p class="small">Talk asks for your passphrase the first time.</p>`;
   // What leaves the phone when a talk starts, said where the user signs in (talk/life.ts, talk/weather.ts).
   const shared = `<p class="small">When a talk starts, the assistant is told your day from this app: prayers, adhkar, ` +
-    `calendar and the books in your hands. The weather comes from Open-Meteo, which is sent your rough location ` +
+    `calendar, the books in your hands and the intentions you set for the week. The weather comes from Open-Meteo, ` +
+    `which is sent your rough location ` +
     `(about 1 km). Signed in, your books also stay the same on every device through your Worker.</p>`;
   return `<section class="card"><label class="label" for="voice-url">VOICE</label><p class="small">Your Worker's address, ` +
     `where Talk connects.</p><input id="voice-url" class="field" data-field="voice-url" type="url" inputmode="url" ` +
@@ -352,6 +357,7 @@ export function settingsView(v: ViewModel, turn?: TurnStats): string {
     `${v.settings.fridayReminders ? " checked" : ""}></label><label class="toggle"><span class="col"><span>Adhkar</span>` +
     `<span class="small">Al-Sabah after Fajr, Al-Masa after Asr, until each is said</span></span><input type="checkbox" ` +
     `data-field="adhkar-reminders"${v.settings.adhkarReminders ? " checked" : ""}></label>` +
+    reviewReminderFields(v.settings.reviewReminder) +
     (ADHAN_BUNDLED ? `<label class="toggle"><span class="col"><span>Adhan</span>` +
       `<span class="small">The adhan at each reminder, Fajr its own${adhanNote()}</span></span>` +
       `<input type="checkbox" data-field="adhan"${v.settings.adhan ? " checked" : ""}></label>` : "") +

@@ -18,6 +18,7 @@ export const KEYS = {
   learn: "os.learn.v1",
   modes: "os.modes.v1",
   money: "os.money.v1",
+  reviews: "os.reviews.v1",
   recordsSync: "os.recordsSync.v1",
 } as const;
 

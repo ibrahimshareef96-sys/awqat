@@ -1,8 +1,12 @@
-/** The prayer days the app works from, and the reminders kept on the device from them (prayers and Friday). */
+/**
+ * The prayer days the app works from, and the reminders kept on the device from them (prayers, Friday, the adhkar and
+ * the weekly review).
+ */
 import { addDays, calendarDayIn, dayKey, dayTimes, type DayTimes } from "../prayer/times.ts";
 import { planAll, planReminders } from "../reminders/plan.ts";
 import { planFriday } from "../faith/friday.ts";
 import { planAdhkar } from "../faith/adhkar.ts";
+import { planReview } from "../review/reminder.ts";
 import { methodInUse } from "../settings.ts";
 import { ADHAN_BUNDLED, exactAlarms, scheduleReminders } from "../device.ts";
 import { state } from "./state.ts";
@@ -47,6 +51,7 @@ export function reschedule(): Promise<void> {
       planReminders(state.days, now, state.settings.reminders, state.place.tz, ADHAN_BUNDLED && state.settings.adhan),
       planFriday(state.days, now, { enabled: state.settings.fridayReminders, done: state.friday }, state.place.tz),
       planAdhkar(state.days, now, { enabled: state.settings.adhkarReminders, log: state.adhkar }, state.place.tz),
+      planReview(state.days, now, { reminder: state.settings.reviewReminder, reviews: state.reviews }, state.place.tz),
     );
     const signature = plan.map((r) => `${r.id}@${r.at.getTime()}@${r.body}@${r.sound ?? ""}`).join("|");
     if (signature === lastPlan && state.pending !== null) return;

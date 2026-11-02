@@ -16,6 +16,8 @@ import { emptyFridayLog, toggleFriday } from "../src/faith/friday.ts";
 import { adhkarFor, emptyAdhkarLog, setDone } from "../src/faith/adhkar.ts";
 import { state } from "../src/app/state.ts";
 import { reschedule } from "../src/app/schedule.ts";
+import { REVIEW_SLOT } from "../src/reminders/plan.ts";
+import { emptyReviewLog, saveReview } from "../src/review/muhasabah.ts";
 
 /** Thursday 22 Oct 2026, 14:00 in Dubai: Friday's reminders are ahead. */
 const THURSDAY = new Date("2026-10-22T10:00:00Z");
@@ -104,6 +106,24 @@ describe("rescheduling", () => {
     state.settings = { ...state.settings, iqama: { ...state.settings.iqama, asr: 33 } };
     await reschedule();
     expect(state.days.every((d) => d.iqama?.asr === 33)).toBe(true);
+  });
+
+  it("plans the weekly review reminder only once it is turned on, and drops it for a week already reviewed", async () => {
+    const reviewIds = () => (device.scheduleReminders.mock.calls.at(-1)?.[0] as { id: number }[])
+      .filter((r) => r.id % 10 === REVIEW_SLOT).map((r) => r.id);
+    state.reviews = emptyReviewLog();
+    await reschedule();
+    expect(reviewIds()).toEqual([]);
+    state.settings = { ...state.settings, reviewReminder: { on: true, weekday: 0, time: "20:00" } };
+    await reschedule();
+    // Sunday the 25th; the Sunday after is past the nearest 60 reminders, and is planned when the app next plans.
+    expect(reviewIds()).toEqual([202610259]);
+    const done = saveReview(state.reviews, { well: "Alhamdulillah", short: "", change: "", intentions: [] }, "2026-10-22");
+    if ("error" in done) throw new Error(done.error);
+    state.reviews = done.log;
+    await reschedule();
+    expect(reviewIds()).toEqual([]);
+    expect(device.scheduleReminders).toHaveBeenCalledTimes(3);
   });
 
   it("plays no adhan in a build that ships none, whatever the switch says", async () => {

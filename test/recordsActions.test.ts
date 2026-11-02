@@ -16,7 +16,8 @@ import { emptyLearn } from "../src/learn/learn.ts";
 import { seedLearn } from "../src/learn/seed.ts";
 import { emptyMarks } from "../src/quran/marks.ts";
 import { addIncome, emptyMoney } from "../src/money/money.ts";
-import { moneyCollection } from "../src/sync/collections.ts";
+import { moneyCollection, reviewsCollection } from "../src/sync/collections.ts";
+import { emptyReviewLog, saveReview, type ReviewLog } from "../src/review/muhasabah.ts";
 import { emptyRecordsSync, stampSaved, type Post, type Wire } from "../src/sync/records.ts";
 import { held, resetPace } from "../src/sync/pace.ts";
 import { hooks, state } from "../src/app/state.ts";
@@ -206,6 +207,41 @@ describe("syncing the user's records", () => {
     expect(state.recordsSync.removed).toEqual([]);
     expect(state.recordsSync.dirty.some((k) => k.includes("mine-1"))).toBe(true);
     state.money = emptyMoney();
+  });
+
+  it("does not mark a week as removed when a sync landed during a review's save", () => {
+    const week = (log: ReviewLog, well: string, day: string): ReviewLog => {
+      const result = saveReview(log, { well, short: "", change: "", intentions: [] }, day);
+      if ("error" in result) throw new Error(result.error);
+      return result.log;
+    };
+    const arrived = week(emptyReviewLog(), "From the tablet", "2026-10-20");
+    const mine = week(emptyReviewLog(), "From here", "2026-10-27");
+    state.recordsSync = stampSaved(reviewsCollection, arrived, { ...emptyRecordsSync(WORKER), listened: true }, 5);
+    state.reviews = week(arrived, "From here", "2026-10-27");
+    recordSaved(KEYS.reviews, mine);
+    expect(state.recordsSync.removed).toEqual([]);
+    expect(state.recordsSync.dirty).toContain("review.week/2026-10-26");
+    state.reviews = emptyReviewLog();
+  });
+
+  it("holds what is typed in this week's review when that week arrives from another device", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-03T08:00:00Z"));
+    state.place = { ...state.place, tz: "Asia/Dubai" };
+    state.reviews = emptyReviewLog();
+    state.reviewDraft = null;
+    state.recordsSync = { ...emptyRecordsSync(WORKER), listened: true, kinds: "" };
+    document.body.innerHTML = `<form data-form="review"><textarea name="well">Typed, not kept</textarea>` +
+      `<textarea name="short"></textarea><textarea name="change"></textarea><input name="intention" value=""></form>`;
+    await syncRecords(async () => answer({ ok: true, cursor: 3, more: false, removed: [], records: [{ kind: "review.week",
+      id: "2026-11-02", updated: 1_800_000_000_000, data: { week: "2026-11-02", day: "2026-11-02", well: "From the tablet",
+        short: "", change: "", intentions: [] } }] }));
+    expect(state.reviews.reviews[0].well).toBe("From the tablet");
+    expect(state.reviewDraft).toMatchObject({ week: "2026-11-02", well: "Typed, not kept" });
+    state.reviews = emptyReviewLog();
+    state.reviewDraft = null;
+    document.body.innerHTML = "";
   });
 
   it("sends the Body log already on a device the first time this version syncs it", async () => {

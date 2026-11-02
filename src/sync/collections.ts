@@ -13,8 +13,9 @@ import { checkPlan, type MurajaahPlan } from "../quran/murajaah.ts";
 import { checkLearn, type Learn } from "../learn/learn.ts";
 import { checkModeLog, type ModeLog } from "../modes/modes.ts";
 import { checkMoney, type Money } from "../money/money.ts";
+import { REVIEWS_MAX, checkReviewLog, isWeekKey, type ReviewLog } from "../review/muhasabah.ts";
 import { KEYS } from "../store.ts";
-import type { Collection, Data, Rec } from "./records.ts";
+import { RECORD_BYTES_MAX, canonical, type Collection, type Data, type Rec } from "./records.ts";
 
 const plain = (v: unknown): v is Data => typeof v === "object" && v !== null && !Array.isArray(v);
 const of = (records: readonly Rec[], kind: string): Rec[] => records.filter((r) => r.kind === kind);
@@ -269,6 +270,35 @@ export const moneyCollection: Collection<Money> = {
     return checkMoney(JSON.stringify({ v: 1, goal: of(records, "money.goal")[0]?.data ?? null, entries: list("money.entry"),
       owed: list("money.owed"), commitments: list("money.commitment"), skipped: of(records, "money.skipped").map((r) => r.id) })).money;
   },
+};
+
+const intentionsOf = (d: Data): unknown[] => (Array.isArray(d.intentions) ? d.intentions : []);
+const doneAt = (d: Data, n: number): boolean => {
+  const i = intentionsOf(d)[n];
+  return plain(i) && i.done === true;
+};
+/** A review's words, its ticks set aside. */
+const wordsOf = (d: Data): string => canonical({ ...d, intentions: intentionsOf(d).map((i) => (plain(i) ? i.text : i)) });
+
+/** A record no bigger than the Worker takes (sync/records.ts), measured as the app measures what it sends. */
+const fits = (r: Rec): boolean => new TextEncoder().encode(JSON.stringify(r.data)).length <= RECORD_BYTES_MAX;
+
+/**
+ * The Weekly Reviews (review/muhasabah.ts), one record a week, by its Monday. When two devices' copies of a week differ
+ * only in their ticks, each intention done on either stays done (so an untick made while the other device's tick is on
+ * its way gives way to it, as a prayer unmarked does); otherwise the newer review wins. Only records whose id is a week
+ * and whose size the Worker allows are read, before the newest 52 are taken, so nothing else can push a review out.
+ */
+export const reviewsCollection: Collection<ReviewLog> = {
+  key: KEYS.reviews,
+  kinds: ["review.week"],
+  toRecords: (log) => log.reviews.map((r) => ({ kind: "review.week", id: r.week, data: r as unknown as Data })),
+  fromRecords: (records) => checkReviewLog(JSON.stringify({
+    v: 1, reviews: newest(of(records, "review.week").filter((r) => isWeekKey(r.id) && fits(r)), REVIEWS_MAX)
+      .map((r) => ({ ...r.data, week: r.id })),
+  })).log,
+  merge: (_kind, mine, theirs) => (wordsOf(mine) !== wordsOf(theirs) ? theirs
+    : { ...theirs, intentions: intentionsOf(theirs).map((i, n) => (plain(i) ? { ...i, done: doneAt(mine, n) || doneAt(theirs, n) } : i)) }),
 };
 
 /** The muraja'ah plan, one record; no plan is no record. */

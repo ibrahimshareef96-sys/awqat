@@ -1,8 +1,9 @@
 /**
  * Agenda's actions: adding and removing calendars, reading them for the week, and choosing the day shown. A read
- * happens when Agenda opens (or the app comes back to it) and the copy is old, and when Refresh is tapped. The
- * calendar reader (and ical.js with it) is loaded only for a read. The state changes before it is saved, as every
- * other action does, so a read finishing meanwhile works from the list as it now is.
+ * happens when Agenda opens (or the app comes back to it) and the copy is older than FRESH_MS (15 minutes) or from
+ * another week or time zone, and when Refresh is tapped; never two at once. The calendar reader (and ical.js with it)
+ * is loaded only for a read. The state changes before it is saved, as every other action does, so a read finishing
+ * meanwhile works from the list as it now is. What the user's Work feed has due is shown on its day, read only.
  */
 import { addCalendar, nameCalendar, removeCalendar } from "../agenda/calendars.ts";
 import { AGENDA_DAYS, needsRead, withRead, withoutCalendar, type ReadOutcome } from "../agenda/agenda.ts";
@@ -10,8 +11,10 @@ import { shiftKey } from "../agenda/days.ts";
 import { fetchCalendar } from "../agenda/fetch.ts";
 import { parseCalendar } from "../agenda/parse.ts";
 import { isNative } from "../device.ts";
+import type { WorkDue } from "../feeds/feeds.ts";
 import { KEYS } from "../store.ts";
 import type { AgendaModel } from "../ui/agendaView.ts";
+import { workerUrl } from "../voice.ts";
 import { freshDays } from "./schedule.ts";
 import { writeCalendarsFile } from "../agenda/calendarStore.ts";
 import { MESSAGES, busyWhile, hooks, save, setNotice, state, today } from "./state.ts";
@@ -30,18 +33,23 @@ export function agendaModel(now: Date): AgendaModel {
   return {
     calendars: state.calendars.calendars, agenda: state.agenda, day, today: date, days: freshDays(now),
     tz: state.place.tz, now: now.getTime(), reading: state.agendaReading, busy: state.busy,
-    removeArmed: state.calendarRemoveArmed,
+    removeArmed: state.calendarRemoveArmed, due: workDue(),
   };
 }
 
+/** What the Work feed has due, with a day: only from the user's own server, and only once it has been read. */
+export function workDue(): WorkDue[] {
+  if (!workerUrl(state.settings.voiceUrl)) return [];
+  return (state.feeds.work.feed?.due ?? []).filter((d) => d.date !== "");
+}
+
 /** What one calendar gave: its week, or why not. */
-async function readOne(url: string, firstDay: string): Promise<{ outcome: ReadOutcome; name: string }> {
+async function readOne(url: string, firstDay: string, timeZone: string): Promise<{ outcome: ReadOutcome; name: string }> {
   const fetched = await fetchCalendar(url);
   if ("problem" in fetched) return { outcome: fetched, name: "" };
   let read: Awaited<ReturnType<typeof parseCalendar>>;
   try {
-    read = await parseCalendar(fetched.text, { firstDay, endDay: shiftKey(firstDay, AGENDA_DAYS),
-      timeZone: state.place.tz });
+    read = await parseCalendar(fetched.text, { firstDay, endDay: shiftKey(firstDay, AGENDA_DAYS), timeZone });
   } catch {
     // Whatever went wrong reading one calendar, the others are still read.
     return { outcome: { problem: "failed" }, name: "" };
@@ -57,17 +65,18 @@ const nextCalendar = (read: readonly string[]) => state.calendars.calendars.find
 /**
  * One pass over the calendars, one after another, each taken from the list as it is at that step: one removed meanwhile
  * is passed over, one added meanwhile is read, and none is read twice. The pass remembers which it has read by id, not
- * by when they were read, so a clock that stood still or went back cannot make it skip one.
+ * by when they were read, so a clock that stood still or went back cannot make it skip one. The whole pass reads in
+ * the zone it began in: a place changed meanwhile is read again on the next open, its reads being in another zone.
  */
-async function readAll(firstDay: string): Promise<void> {
+async function readAll(firstDay: string, tz: string): Promise<void> {
   let read: readonly string[] = [];
   for (let calendar = nextCalendar(read); calendar; calendar = nextCalendar(read)) {
     const { id, url } = calendar;
     read = [...read, id];
-    const { outcome, name } = await readOne(url, firstDay);
+    const { outcome, name } = await readOne(url, firstDay, tz);
     // Removed while it was being read: what it gave is let go.
     if (!state.calendars.calendars.some((c) => c.id === id)) continue;
-    state.agenda = withRead(state.agenda, id, outcome, firstDay, state.place.tz, Date.now());
+    state.agenda = withRead(state.agenda, id, outcome, firstDay, tz, Date.now());
     const named = nameCalendar(state.calendars, id, name);
     if (named !== state.calendars) {
       state.calendars = named;
@@ -86,7 +95,8 @@ async function readAll(firstDay: string): Promise<void> {
 export async function refreshAgenda(force = false): Promise<void> {
   if (state.agendaReading || ids().length === 0) return;
   const firstDay = today();
-  if (!force && !needsRead(state.agenda, ids(), firstDay, Date.now())) return;
+  const tz = state.place.tz;
+  if (!force && !needsRead(state.agenda, ids(), firstDay, Date.now(), tz)) return;
   if (!isNative()) {
     setNotice(AGENDA_MESSAGES.webOnly);
     return hooks.softRender();
@@ -94,7 +104,7 @@ export async function refreshAgenda(force = false): Promise<void> {
   state.agendaReading = true;
   hooks.softRender();
   try {
-    await readAll(firstDay);
+    await readAll(firstDay, tz);
     await save(KEYS.agenda, state.agenda);
   } finally {
     state.agendaReading = false;

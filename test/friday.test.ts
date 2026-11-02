@@ -92,7 +92,10 @@ describe("Friday reminders", () => {
   it("counts as the app's own reminders, so stale ones are cancelled", () => {
     expect(isReminderId(202610237)).toBe(true);
     expect(isReminderId(202610238)).toBe(true);
-    expect(isReminderId(202610239)).toBe(false);
+    // The last slot is the weekly review's reminder (review/reminder.ts); anything outside the date scheme is not ours.
+    expect(isReminderId(202610239)).toBe(true);
+    expect(isReminderId(12345)).toBe(false);
+    expect(isReminderId(202610237.5)).toBe(false);
   });
 
   it("shares the 60-reminder limit with the prayers, nearest first", () => {

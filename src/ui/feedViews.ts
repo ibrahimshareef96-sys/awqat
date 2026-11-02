@@ -71,7 +71,7 @@ export function workView(m: WorkModel, head: string, notice: string, chrome: str
   const feed = m.feed;
   if (!feed) return `<main class="screen single">${head}${notice}${statusCard(m.status, false, "work")}</main>${chrome}`;
   const due = feed.due.length === 0 ? "" : `<section class="card" aria-label="Due"><h2 class="label">DUE</h2><ul class="plain">${feed.due.map((d) =>
-    `<li class="money-row"><span class="col"><span class="check-name">${esc(d.text)}</span>${d.date ? `<span class="small">${d.late ? "Was due" : "Due"} ${esc(dayText(d.date))}</span>` : ""}</span>` +
+    `<li class="money-row"><span class="col"><span class="check-name">${esc(d.text)}</span>${d.date ? `<span class="small">${d.late ? "Was due" : "Due"} ${esc(dayText(d.date))}${d.time ? `, ${esc(d.time)}` : ""}</span>` : ""}</span>` +
     `${d.late ? `<span class="label accent">LATE</span>` : ""}</li>`).join("")}</ul></section>`;
   const waiting = feed.waiting.length === 0 ? "" : `<section class="card" aria-label="Waiting on others"><details id="work-waiting"><summary class="label">WAITING ON OTHERS · ${feed.waiting.length}</summary><ul class="plain">` +
     `${feed.waiting.map((w) => `<li class="money-row"><span class="col"><span class="check-name">${esc(w.text)}</span>` +
