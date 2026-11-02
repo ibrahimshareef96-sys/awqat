@@ -38,6 +38,18 @@ describe("settings", () => {
     expect(parseSettings(JSON.stringify({ adhkarReminders: 0 })).adhkarReminders).toBe(true);
   });
 
+  it("show the adhkar's Arabic, sound and meaning unless each was turned off", () => {
+    expect(defaultSettings().adhkarShow).toEqual({ arabic: true, sound: true, meaning: true });
+    expect(parseSettings(JSON.stringify({ name: "Sam" })).adhkarShow).toEqual({ arabic: true, sound: true, meaning: true });
+    expect(parseSettings(JSON.stringify({ adhkarShow: { sound: false } })).adhkarShow)
+      .toEqual({ arabic: true, sound: false, meaning: true });
+    expect(parseSettings(JSON.stringify({ adhkarShow: { arabic: false, meaning: false } })).adhkarShow)
+      .toEqual({ arabic: false, sound: true, meaning: false });
+    expect(parseSettings(JSON.stringify({ adhkarShow: { arabic: "no", sound: 0 } })).adhkarShow)
+      .toEqual({ arabic: true, sound: true, meaning: true });
+    expect(parseSettings(JSON.stringify({ adhkarShow: [false] })).adhkarShow).toEqual({ arabic: true, sound: true, meaning: true });
+  });
+
   it("cap the name at 40 characters", () => {
     expect(parseSettings(JSON.stringify({ name: "x".repeat(90) })).name).toHaveLength(40);
   });

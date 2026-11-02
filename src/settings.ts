@@ -5,6 +5,9 @@ import { PRAYERS, type PrayerName } from "./prayer/times.ts";
 import { DEFAULT_REVIEW_REMINDER, cleanReviewReminder, type ReviewReminder } from "./review/reminder.ts";
 import { cleanWorkerUrl } from "./voice.ts";
 
+/** What the adhkar lists and the du'a after the salam show of each dhikr: its Arabic, how to say it, its meaning. */
+export interface AdhkarShow { arabic: boolean; sound: boolean; meaning: boolean }
+
 export interface Settings {
   name: string;
   method: MethodId | "auto";
@@ -17,6 +20,8 @@ export interface Settings {
   adhkarReminders: boolean;
   /** A reminder for the Weekly Review on a day and at a time the user picks; off until turned on. */
   reviewReminder: ReviewReminder;
+  /** The Arabic, Sound and Meaning toggles above the adhkar: all on until turned off. */
+  adhkarShow: AdhkarShow;
   /** Each prayer reminder plays the adhan (Fajr its own), in a build that ships one (device.ts); off, the system's sound. */
   adhan: boolean;
   /** The assistant may hear the user's money and log it. Off until allowed: amounts pass through the voice service. */
@@ -44,6 +49,7 @@ export function defaultSettings(): Settings {
     fridayReminders: true,
     adhkarReminders: true,
     reviewReminder: { ...DEFAULT_REVIEW_REMINDER },
+    adhkarShow: { arabic: true, sound: true, meaning: true },
     adhan: true,
     assistantMoney: false,
     assistantHealth: false,
@@ -58,6 +64,12 @@ export function cleanName(value: unknown): string {
   if (typeof value !== "string") return "";
   // By characters, not UTF-16 units, so an emoji is never cut in half.
   return Array.from(value.replace(/\s+/g, " ").trim()).slice(0, NAME_MAX).join("").trim();
+}
+
+/** Each part shown unless it was turned off, so a part added later starts on. */
+function cleanShow(value: unknown): AdhkarShow {
+  const raw = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+  return { arabic: raw.arabic !== false, sound: raw.sound !== false, meaning: raw.meaning !== false };
 }
 
 export function parseSettings(json: string | null): Settings {
@@ -80,6 +92,7 @@ export function parseSettings(json: string | null): Settings {
       fridayReminders: raw.fridayReminders !== false,
       adhkarReminders: raw.adhkarReminders !== false,
       reviewReminder: cleanReviewReminder(raw.reviewReminder),
+      adhkarShow: cleanShow(raw.adhkarShow),
       adhan: raw.adhan !== false,
       assistantMoney: raw.assistantMoney === true,
       assistantHealth: raw.assistantHealth === true,

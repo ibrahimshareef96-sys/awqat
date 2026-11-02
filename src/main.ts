@@ -20,6 +20,7 @@ import { reminderTarget } from "./reminders/plan.ts";
 import { SESSION_NAME, adhkarWindow, checkAdhkarLog } from "./faith/adhkar.ts";
 import { adhkarView } from "./ui/adhkarView.ts";
 import * as adhkar from "./app/adhkarActions.ts";
+import * as meaning from "./app/meaningActions.ts";
 import { shelfMessage } from "./books/shelf.ts";
 import { syncShelf } from "./app/shelfActions.ts";
 import { syncBooks, syncBooksSoon } from "./app/syncActions.ts";
@@ -225,7 +226,7 @@ function screenHtml(v: ViewModel): string {
   const session = adhkar.openSession();
   if (session) {
     const m = { log: v.adhkar, open: v.adhkarOpen, date: v.today.date, now: v.now, tz: v.place.tz, session,
-      maghrib: v.today.maghrib };
+      maghrib: v.today.maghrib, show: state.settings.adhkarShow, meanings: meaning.adhkarMeanings(session, v.now.getTime()) };
     const back = screenBackLabel(state.adhkarFrom);
     return adhkarView(m, header(SESSION_NAME[session], session === "morning" ? "The morning remembrance"
       : "The evening remembrance", state.adhkarFrom, back), noticeLine(v), chrome());
@@ -714,6 +715,8 @@ function show(target: string): void {
   // or the health store.
   if (target === "agenda" || target === "review") void agenda.refreshAgenda();
   if (target === "body") void body.openBody();
+  // An adhkar list or a prayer's mode: its translation, from the phone's copy or fetched, fills in where it waits.
+  void meaning.fetchMeanings();
   const feed = feedOfScreen(target);
   if (feed) void refreshFeed(feed);
   // Books opened: the library syncs, and the TV's shelf is sent if it changed or an earlier send did not get through.
@@ -813,6 +816,7 @@ function act(action: string, value: string): void {
     case "dhikr": return adhkar.count(value);
     case "dhikr-done": return adhkar.toggleDone(value);
     case "dhikr-back": return adhkar.takeBack(value);
+    case "adhkar-show": return meaning.toggleShow(value);
     case "book-next": return turnBook(1);
     case "book-back": return turnBook(-1);
     case "mushaf-theme": return mushaf.toggleTheme();
@@ -1087,6 +1091,7 @@ function onResume(): void {
   void agenda.refreshAgenda();
   if (state.screen === "body") void body.openBody();
   else body.readForHome();
+  void meaning.fetchMeanings();
   const feed = feedOfScreen(state.screen);
   if (feed) void refreshFeed(feed);
   void takeTaps();
@@ -1193,6 +1198,9 @@ async function boot(): Promise<void> {
   document.addEventListener("change", onChange);
   document.addEventListener("input", onInput);
   document.addEventListener("error", onImageError, true);
+  // Where the finger is, so a translation arriving never moves what it is on (app/meaningActions.ts).
+  document.addEventListener("pointerdown", meaning.notePress, { capture: true, passive: true });
+  window.addEventListener("scroll", meaning.noteScroll, { passive: true });
   listenForHands({ settled: onSettled, free: onHandsFree });
   listenForBook({ landed: (page) => onSettled(page), moving: bookMoving });
   listenForHold({ hold: holdWord, ready: () => state.screen === "mushaf" && !state.sheet });
@@ -1230,6 +1238,8 @@ async function boot(): Promise<void> {
   mushaf.setSpread(showsSpread(window.innerWidth, window.innerHeight));
   render();
   body.readForHome();
+  // The adhkar's translation kept on the phone, read now so a list opens with it.
+  void meaning.warmUp();
   // Widget taps, only once what was saved is loaded: a tap that started the app is held by Capacitor until now, so
   // nothing is drawn (or sent to the widget) from empty state.
   if (isNative()) void App.addListener("appUrlOpen", (event) => openLink(event.url));

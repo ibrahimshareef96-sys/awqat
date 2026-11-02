@@ -387,7 +387,9 @@ export function settingsView(v: ViewModel, turn?: TurnStats): string {
     (v.exact === "denied" ? `<button type="button" class="pill" data-action="exact"${busy(v)}>Exact times</button>` : "") +
     `</div></section>${calendarsCard(v.agenda)}${voiceCard(v)}${reciteCard()}<p class="foot">Awqat 0.19, open source (MIT) · ` +
     `prayer times by adhan-js (MIT) · Hijri date: Umm al-Qura · adhkar: Hisn al-Muslim, from Seen Arabic's set (MIT) · ` +
-    `du'a after the salam: Hisn al-Muslim, from hisnmuslim.com · Quran fonts provided by Quran Foundation, King Fahd ` +
+    `du'a after the salam: Hisn al-Muslim, from hisnmuslim.com · the adhkar's translation and transliteration: Hisn ` +
+    `al-Muslim, fetched from hisnmuslim.com, and for the Quran items Saheeh International and the transliteration, ` +
+    `fetched from Quran.com · Quran fonts provided by Quran Foundation, King Fahd ` +
     `Complex script · Quran metadata: Tanzil Project (tanzil.net) · type: Instrument Serif (OFL) · weather: Open-Meteo ` +
     `(CC BY 4.0) · covers and book data: Open Library · calendars read with ical.js (MPL-2.0) · health data through ` +
     `Capgo's Capacitor Health (MPL-2.0) · voice through ElevenLabs' client (MIT) and LiveKit (Apache-2.0) · recitation ` +

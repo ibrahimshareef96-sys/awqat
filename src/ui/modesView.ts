@@ -16,8 +16,11 @@ import { counterRow } from "./adhkarView.ts";
 import type { AdhkarLog } from "../faith/adhkar.ts";
 import { SESSION_NAME, type Session } from "../faith/adhkar.ts";
 import type { FridayLog } from "../faith/friday.ts";
+import type { Meaning } from "../faith/meaning.ts";
 import { PRAYER_LABEL, formatTime, type DayTimes, type PrayerName } from "../prayer/times.ts";
+import type { AdhkarShow } from "../settings.ts";
 import { esc, icon } from "./html.ts";
+import { SHOW_ALL, arabicShown, creditsLine, meaningBlock, showToggles } from "./meaningView.ts";
 
 export interface ModesModel {
   log: ModeLog;
@@ -40,7 +43,20 @@ export interface ModesModel {
   live?: boolean;
   /** What is being counted there now (live.ts dhikrKey). */
   liveKey?: string | null;
+  /** What the du'a after the salam show (Settings), and, by du'a id, how to say each and its meaning. */
+  show?: AdhkarShow;
+  duaMeanings?: Readonly<Record<string, Meaning | null>>;
 }
+
+const duaMeaningOf = (m: ModesModel, id: string): Meaning | null | undefined =>
+  (m.duaMeanings && Object.hasOwn(m.duaMeanings, id) ? m.duaMeanings[id] : undefined);
+
+/** The app's own du'as in a mode (not the user's), each with what it shows under its Arabic. */
+const appDuas = (def: ModeDef): Extract<Step, { kind: "dua" }>[] =>
+  def.groups.flatMap((g) => g.steps).filter((s): s is Extract<Step, { kind: "dua" }> => s.kind === "dua" && !s.own);
+
+/** The toggles show where a du'a has a meaning to show; elsewhere every du'a shows its Arabic, whatever they say. */
+const hasMeanings = (def: ModeDef, m: ModesModel): boolean => appDuas(def).some((s) => duaMeaningOf(m, s.id));
 
 const SESSION_AR: Readonly<Record<Session, string>> = { morning: "أذكار الصباح", evening: "أذكار المساء" };
 
@@ -148,16 +164,22 @@ export function modesListView(m: ModesModel, head: string, notice: string, chrom
 }
 
 /** The counter card, as the adhkar lists have it: a tap on the words counts, Done says it in full. */
-function counted(step: Extract<Step, { kind: "dua" | "quran" | "page" }>, mode: ModeId, c: ModeContext, m: ModesModel): string {
+function counted(step: Extract<Step, { kind: "dua" | "quran" | "page" }>, mode: ModeId, c: ModeContext, m: ModesModel,
+  show: AdhkarShow): string {
   const { n, of } = stepProgress(mode, step, c);
   const done = n >= of;
   const off = c.date === null;
   const name = esc(step.name);
-  const words = step.kind === "dua" ? `<span class="dhikr-ar" lang="ar" dir="rtl">${esc(step.text)}</span>`
+  const own = step.kind === "dua" && step.own === true;
+  const said = step.kind === "dua" && !own ? duaMeaningOf(m, step.id) : undefined;
+  // The user's own words always show: the toggles are for the app's du'as.
+  const arabic = own ? { shown: true, fallback: false } : arabicShown(said, show);
+  const words = step.kind === "dua" ? (arabic.shown ? `<span class="dhikr-ar" lang="ar" dir="rtl"${arabic.fallback ? " data-fallback" : ""}>` +
+    `${esc(step.text)}</span>` : "")
     : step.kind === "page" ? `<img class="dhikr-page" src="${esc(step.picture)}" width="${step.width}" height="${step.height}" alt="${esc(step.alt)}" loading="lazy" draggable="false">`
       : "";
+  const meaning = step.kind === "dua" && !own ? meaningBlock(`d:${step.id}`, said, show) : "";
   const hint = step.kind === "dua" && step.hint ? `<span class="small">${esc(step.hint)}</span>` : "";
-  const own = step.kind === "dua" && step.own;
   const armed = m.removeArmed === step.id;
   const remove = own ? `<button type="button" class="ghost-link" data-action="mode-dua-remove" data-value="${esc(step.id)}" ` +
     `aria-label="${armed ? "Tap again to remove" : "Remove"}: ${name}">${armed ? "Tap again to remove" : "Remove"}</button>` : "";
@@ -166,7 +188,7 @@ function counted(step: Extract<Step, { kind: "dua" | "quran" | "page" }>, mode: 
     `${esc(step.where)}. Read it from the mushaf, then count it here.</p><button type="button" class="pill solid wide dhikr-read" ` +
     `data-action="mode-quran" data-value="${esc(step.id)}" aria-label="Read ${name}, page ${step.page}">Read it on p. ${step.page}</button>`
     : `<button type="button" class="dhikr-tap" data-action="mode-count" data-value="${esc(step.id)}"${done || off ? ' aria-disabled="true"' : ""}>` +
-      `<span class="dhikr-name">${name}</span>${words}${hint}<span class="sr-only">Tap to count</span></button>`;
+      `<span class="dhikr-name">${name}</span>${words}${meaning}${hint}<span class="sr-only">Tap to count</span></button>`;
   const foot = off ? "" : `<div class="dhikr-foot">${counterRow({ action: "mode-count", value: step.id, n, of, name: step.name }, "mode-back", "mode-done")}</div>`;
   // Only where there is a count to keep going: a step said once is done with one tap here.
   const counting = m.liveKey === `${mode}|${c.date}|${step.id}`;
@@ -217,19 +239,19 @@ function sunnahStep(step: Extract<Step, { kind: "sunnah" }>, mode: ModeId, c: Mo
     `</span></span></button></li>`;
 }
 
-function stepHtml(step: Step, mode: ModeId, c: ModeContext, m: ModesModel): string {
+function stepHtml(step: Step, mode: ModeId, c: ModeContext, m: ModesModel, show: AdhkarShow): string {
   if (step.kind === "read" || step.kind === "friday") return fridayStep(step, c);
   if (step.kind === "adhkar") return adhkarStep(step, mode, c);
   if (step.kind === "sunnah") return sunnahStep(step, mode, c, m);
-  return counted(step, mode, c, m);
+  return counted(step, mode, c, m, show);
 }
 
 const listClass = (steps: readonly Step[]): string =>
   steps.every((s) => s.kind === "read" || s.kind === "friday" || s.kind === "sunnah") ? "plain checks card" : "plain dhikr-list";
 
-function groupHtml(title: string, steps: readonly Step[], mode: ModeId, c: ModeContext, m: ModesModel): string {
+function groupHtml(title: string, steps: readonly Step[], mode: ModeId, c: ModeContext, m: ModesModel, show: AdhkarShow): string {
   return `<h2 class="label mode-group">${esc(title.toUpperCase())}</h2><ol class="${listClass(steps)}">` +
-    `${steps.map((s) => stepHtml(s, mode, c, m)).join("")}</ol>`;
+    `${steps.map((s) => stepHtml(s, mode, c, m, show)).join("")}</ol>`;
 }
 
 export function modeView(def: ModeDef, m: ModesModel, head: string, notice: string, chrome: string, top = ""): string {
@@ -237,10 +259,14 @@ export function modeView(def: ModeDef, m: ModesModel, head: string, notice: stri
   const c = contextFor(m, date);
   const closed = date === null ? `<p class="small">This opens at Maghrib on Thursday. You can read it now; ticks start then.</p>` : "";
   const own = ownSteps(def, m.log);
+  const toggles = hasMeanings(def, m);
+  const show = toggles ? m.show ?? SHOW_ALL : SHOW_ALL;
   return `<main class="screen single mode-screen mode-${esc(def.id)}">${head}${notice}${closed}${top}` +
-    def.groups.map((g) => groupHtml(g.title, g.steps, def.id, c, m)).join("") +
-    (own.length > 0 ? groupHtml("Your du'as", own, def.id, c, m) : "") +
+    (toggles ? showToggles(show) : "") +
+    def.groups.map((g) => groupHtml(g.title, g.steps, def.id, c, m, show)).join("") +
+    (own.length > 0 ? groupHtml("Your du'as", own, def.id, c, m, show) : "") +
     `<button type="button" class="pill mode-add" data-action="mode-dua-add" data-value="${esc(def.id)}">Add a du'a</button>` +
+    (toggles ? creditsLine(appDuas(def).map((s) => duaMeaningOf(m, s.id)), show) : "") +
     `</main>${chrome}`;
 }
 
