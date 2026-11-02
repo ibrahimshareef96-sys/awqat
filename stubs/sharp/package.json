@@ -1,0 +1,7 @@
+{
+  "name": "sharp",
+  "version": "0.0.0-awqat-stub",
+  "description": "Empty stand-in: transformers.js uses sharp only for images in Node; the app sends it audio in the web view.",
+  "license": "MIT",
+  "main": "index.js"
+}

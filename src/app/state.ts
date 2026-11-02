@@ -27,6 +27,7 @@ import type { MoneySheetKind } from "../ui/moneyView.ts";
 import type { LearnSheet } from "../ui/learnView.ts";
 import { write } from "../store.ts";
 import type { TalkSession } from "../talk/session.ts";
+import { closedFind, type FindFlow, type MemoriseSession } from "../recite/session.ts";
 
 /** signin: the passphrase form; signing: it is being checked; the rest follow a talk from tap to end. */
 export type TalkPhase = "idle" | "signin" | "signing" | "connecting" | "listening" | "speaking" | "working" | "ending";
@@ -43,7 +44,8 @@ export interface GuestReading {
 
 export type Screen = "home" | "faith" | "settings" | "quran" | "mushaf" | "books" | "agenda" | "body" | "money" | "work" | "inbox" | "review" | `book:${string}` |
   `adhkar:${Session}` | "learn" | "learn-review" | `learn:${string}` | "modes" | `mode:${string}`;
-export type Sheet = null | "talk" | "add-book" | "new-book" | "word" | "page-note" | "goto" | "murajaah" | "mode-dua" | "money" | LearnSheet;
+export type Sheet = null | "talk" | "add-book" | "new-book" | "word" | "page-note" | "goto" | "murajaah" | "mode-dua" | "money" |
+  "recite" | "memorise-done" | LearnSheet;
 
 export const MESSAGES = {
   unsaved: "That could not be saved. Try again.",
@@ -106,6 +108,12 @@ export const state = {
   word: null as string | null,
   /** While the whole mushaf's script is being kept on the phone: how far along. */
   mushafDownload: null as { done: number; total: number } | null,
+  /** Recite to find, while its sheet is up (recite/session.ts). */
+  recite: closedFind() as FindFlow,
+  /** A page being memorised: its words hidden and filled in as they are recited; null when none. */
+  memorise: null as MemoriseSession | null,
+  /** An ayah just found by reciting ("sura:ayah"), lit on its page for a moment. */
+  reciteLit: null as string | null,
   library: emptyLibrary() as Library,
   /** How the TV's "reading now" shelf stands (books/shelf.ts). */
   tvShelf: { state: "idle" } as ShelfState,

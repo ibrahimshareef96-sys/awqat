@@ -1,0 +1,7 @@
+{
+  "name": "onnxruntime-node",
+  "version": "0.0.0-awqat-stub",
+  "description": "Empty stand-in: the app runs speech in the web view with onnxruntime-web; the Node runtime is never used.",
+  "license": "MIT",
+  "main": "index.js"
+}

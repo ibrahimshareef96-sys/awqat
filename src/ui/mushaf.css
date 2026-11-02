@@ -132,4 +132,21 @@
 .ayah-text mark { padding: 0 2px; border-radius: 4px; color: inherit; background: rgba(226,204,154,0.28); }
 .center-row { justify-content: center; }
 .sheet-error { align-self: stretch; font-size: 13.5px; line-height: 1.5; color: #f0b4ae; text-align: center; }
+
+/*
+ * Memorise (recite/align.ts, ui/reciteView.ts paintMemorise): a hidden word keeps its glyphs and its place, with clear
+ * ink and a faint line under it, so the page's lines stand as printed while its words are blank. A word heard as
+ * another is drawn in rose, one skipped is underlined in apricot, one peeked at in sand.
+ */
+.reader.memorising .w.m-hid { color: transparent; box-shadow: inset 0 -1px 0 var(--page-hair); cursor: default; }
+.w.m-diff { color: #b3134f; box-shadow: inset 0 -2px 0 #ef3a78; }
+.theme-night .w.m-diff { color: #ff8db5; }
+.w.m-skip { box-shadow: inset 0 -2px 0 #f89a5b; }
+.w.m-peek { box-shadow: inset 0 -2px 0 #d9b56e; }
+/* An ayah found by reciting, lit for a moment once its page opens. */
+.w.lit { background: rgba(239,58,120,0.16); }
+.theme-night .w.lit { background: rgba(239,58,120,0.26); }
+.memorise-line { max-width: 22rem; text-align: center; }
+.mic-round { width: 52px; height: 52px; }
+.reader .mic-round.listening { background: #ef3a78; border-color: #ef3a78; color: #0b0a0d; }
 .sheet-error[hidden] { display: none; }

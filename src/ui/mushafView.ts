@@ -10,8 +10,10 @@ import { juzOfPage } from "../quran/log.ts";
 import { surahPages } from "../quran/pages.ts";
 import { ayahOfWord, type MushafLine, type MushafPage, type MushafWord } from "../quran/mushafPage.ts";
 import type { MushafMarks } from "../quran/marks.ts";
+import type { MemoriseSession } from "../recite/session.ts";
 import { deviceWord } from "./deviceWord.ts";
 import { esc, icon } from "./html.ts";
+import { memoriseBar } from "./reciteView.ts";
 
 export type ReaderPage =
   | { page: number; status: "ready"; data: MushafPage; font: string }
@@ -47,6 +49,8 @@ export interface ReaderModel {
     /** Where the user's own reading stays meanwhile. */
     bookmark: number;
   } | null;
+  /** A page being memorised: its bar takes the place of the reader's own. */
+  memorise?: MemoriseSession | null;
 }
 
 const KAHF = surahPages(18);
@@ -132,6 +136,7 @@ function guestFooter(g: NonNullable<ReaderModel["guest"]>, m: ReaderModel): stri
 }
 
 function footer(m: ReaderModel): string {
+  if (m.memorise) return memoriseBar(m.memorise);
   if (m.guest) return guestFooter(m.guest, m);
   const shown = inView(m);
   const last = Math.max(...shown);
@@ -146,6 +151,7 @@ function footer(m: ReaderModel): string {
     `${ahead ? `Read to p. ${last}` : "Read"}</button>` +
     `<button type="button" class="pill${m.revisedToday ? " solid" : ""}" data-action="mushaf-revise" aria-pressed="${m.revisedToday}">` +
     `Juz ${juz} revised</button>${noteButtons(m)}` +
+    `<button type="button" class="pill" data-action="memorise-start">Memorise</button>` +
     `${m.jumpFrom !== null ? `<button type="button" class="pill" data-action="mushaf-jump-back">Back to p. ${m.jumpFrom}</button>` : ""}` +
     `</div>${kahfEnd ? `<button type="button" class="ghost-link" data-action="friday" data-value="kahf">Al-Kahf read today</button>` : ""}` +
     `</footer>`;
@@ -228,6 +234,8 @@ export function mushafView(m: ReaderModel): string {
       `${juz}, ${where} of ${PAGES}. Go to another page">${titleInner}</button>`;
   return `<main class="reader theme-${m.marks.theme}"><header class="reader-top">` +
     `<button type="button" class="round" data-go="${esc(m.from)}" aria-label="Close the mushaf">${icon("back")}</button>${title}` +
+    (m.memorise ? "" : `<button type="button" class="round" data-action="recite-open" aria-label="Recite to find an ayah">` +
+      `${icon("mic")}</button>`) +
     `<button type="button" class="round" data-action="mushaf-theme" aria-label="${night ? "Paper page" : "Night page"}">` +
     `${icon(night ? "sun" : "moon")}</button></header>` +
     `<div class="pager${m.spread ? " spread" : ""}${m.book ? " book" : ""}" dir="rtl" data-pager>${m.pages.map((p) => pageHtml(p, m)).join("")}</div>` +

@@ -284,6 +284,25 @@ function keptOpen(said: string): void {
   sheetError(`${said} Your note is not saved yet: save it, or close again to let it go.`);
 }
 
+/** A page's words in reading order (ayah numbers included), with each one's line and place on it; null until it opens. */
+export function pageWords(page: number): { words: MushafWord[]; at: Map<string, { line: number; word: number }> } | null {
+  const data = cachedPage(page);
+  if (!data) return null;
+  const words: MushafWord[] = [];
+  const at = new Map<string, { line: number; word: number }>();
+  for (const line of data.lines) {
+    if (line.kind !== "words") continue;
+    line.words.forEach((w, i) => { words.push(w); at.set(w.key, { line: line.n, word: i + 1 }); });
+  }
+  return { words, at };
+}
+
+/** Memorising's slips and peeks, kept as revision mistakes on their words (the sheet that asked for it then closes). */
+export function keepMistakes(words: readonly string[], said: string): Promise<void> {
+  const day = today();
+  return commit((m) => words.reduce((marks, word) => markMistake(marks, word, day), m), said, true);
+}
+
 export function markWord(): void {
   const word = state.word;
   if (word) void commit((m) => markMistake(m, word, today()), "Mistake marked.", false);
@@ -380,5 +399,6 @@ export function readerModel(now = new Date()): ReaderModel {
     kahfOpen: open !== null && state.friday.days[open.friday]?.kahf !== true,
     from: state.mushafFrom, notice: state.notice, jumpFrom: state.mushafJumpFrom,
     guest: guestModel(open?.friday ?? null),
+    memorise: state.memorise,
   };
 }

@@ -315,6 +315,16 @@ li:first-child > .mode-row { border-top: 0; }
 .talk-logged[hidden] { display: none; }
 .talk-mute { min-width: 48px; display: inline-flex; align-items: center; justify-content: center; }
 .talk-mute[aria-pressed="true"] { background: rgba(255,255,255,0.14); }
+/*
+ * Recite to find: the microphone's level as nine bars, each scaled by script from where it is now to the next level
+ * (reciteView.paintFind), so it never jumps back to rest between frames.
+ */
+.recite-meter { display: flex; align-items: center; justify-content: center; gap: 6px; height: 72px; }
+.recite-meter span { display: block; width: 6px; height: 100%; border-radius: 3px; background: #ef3a78;
+  transform: scaleY(0.12); transform-origin: 50% 50%; transition: transform 90ms linear; }
+@media (prefers-reduced-motion: reduce) {
+  .recite-meter span { transition: none; }
+}
 
 /* Bars: their widths and heights are set from data-w / data-h by script (the policy allows no inline styles). */
 .bar { display: block; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; }

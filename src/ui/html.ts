@@ -20,6 +20,7 @@ const PATHS: Readonly<Record<string, string>> = {
   note: '<path d="M5 4h10l4 4v12H5z"></path><path d="M9 12h6M9 16h4"></path>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path>',
   micOff: '<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3M4 4l16 16"></path>',
+  pause: '<path d="M9 5v14M15 5v14"></path>',
 };
 
 export function icon(name: keyof typeof PATHS | string, size = 20): string {

@@ -55,6 +55,8 @@ import * as plan from "./app/murajaahActions.ts";
 import { linkTarget, syncWidget, widgetSnapshot } from "./app/widget.ts";
 import { pruneKeptPages } from "./quran/mushafFiles.ts";
 import * as mushaf from "./app/mushafActions.ts";
+import * as recite from "./app/reciteActions.ts";
+import { memoriseDoneSheet, reciteSheet } from "./ui/reciteView.ts";
 import { bookmarkPage } from "./quran/bookmark.ts";
 import { bookMoving, handsMoving, listenForHands, pagerReplaced, resetHands } from "./app/hands.ts";
 import { barsMoved, forgetBookPage, lastTurn, listenForBook, resetBook, turnBook } from "./ui/pageTurn.ts";
@@ -262,7 +264,12 @@ function render(): void {
   const html = screenHtml(v);
   setSky(skyMoment(v.today, now));
   const painted = takePaintedInPlace();
-  if (html === lastHtml && !painted) return paintReaderBars();
+  if (html === lastHtml && !painted) {
+    paintReaderBars();
+    // A page being memorised changes word by word, often without the reader's own HTML changing.
+    if (state.screen === "mushaf") recite.afterReaderDraw(byId("app"));
+    return;
+  }
   const root = byId("app");
   const kept = keep(root, sentForm, lastScreen);
   const stayingInReader = lastScreen === "mushaf" && state.screen === "mushaf";
@@ -271,7 +278,10 @@ function render(): void {
   // A book's reader is brought up to date in place: its pages stay as the browser has drawn them.
   const patch = stayingInReader ? patchReader(root, html) : null;
   if (!patch) {
-    if (lastScreen === "mushaf" && state.screen !== "mushaf") releasePictures();
+    if (lastScreen === "mushaf" && state.screen !== "mushaf") {
+      releasePictures();
+      recite.leaveReader();
+    }
     root.innerHTML = html;
     rememberPages(root);
   }
@@ -295,6 +305,8 @@ function render(): void {
     }
     // The ayah held open in its sheet stays lit on the pages drawn anew.
     if (state.sheet === "word") relight();
+    // A page being memorised, and an ayah just found by reciting, painted over the words drawn.
+    recite.afterReaderDraw(root);
   }
 }
 
@@ -406,12 +418,35 @@ function duaSheetFor(mode: string | null): string {
   return def ? duaSheet(def) : "";
 }
 
+function reciteSheetHtml(kind: "recite" | "memorise-done"): string {
+  if (kind === "recite") return reciteSheet(state.recite);
+  const session = state.memorise;
+  return session ? memoriseDoneSheet(session, mushaf.pageWords(session.page)?.at ?? new Map()) : "";
+}
+
+/** A recitation sheet drawn again in place, its focus kept on the same control where it is still there. */
+function redrawReciteSheet(overlay: HTMLElement, kind: "recite" | "memorise-done"): void {
+  const html = reciteSheetHtml(kind);
+  if (!html) return closeSheet(true);
+  if (overlay.dataset.drawn === html) return;
+  const focused = document.activeElement instanceof HTMLElement && overlay.contains(document.activeElement)
+    ? selectorsFor(document.activeElement) : [];
+  overlay.innerHTML = html;
+  overlay.dataset.drawn = html;
+  applySizes(overlay);
+  const back = focused.map((s) => overlay.querySelector<HTMLElement>(s)).find(Boolean)
+    ?? overlay.querySelector<HTMLElement>("[data-autofocus]") ?? overlay.querySelector<HTMLElement>("button");
+  back?.focus({ preventScroll: true });
+}
+
 function renderOverlay(): void {
   const overlay = byId("overlay");
   const kind = state.sheet;
   if (kind === lastSheet && kind !== null) {
     // The Talk sheet's buttons follow its own phase (talkView.paintTalk), never the app's busy flag.
     if (kind === "talk") return hooks.paintTalk();
+    // Recitation's sheets follow their own flow: drawn again when what they say has changed.
+    if (kind === "recite" || kind === "memorise-done") return redrawReciteSheet(overlay, kind);
     overlay.querySelectorAll<HTMLButtonElement | HTMLInputElement>("button, input[type=file]").forEach((el) => {
       if (!el.dataset.go) el.disabled = state.busy;
     });
@@ -429,8 +464,11 @@ function renderOverlay(): void {
     : kind === "goto" ? gotoSheet(state.mushafPage)
     : kind === "murajaah" ? murajaahSheet(state.murajaah)
     : kind === "mode-dua" ? duaSheetFor(state.modeDuaFor)
+    : kind === "recite" || kind === "memorise-done" ? reciteSheetHtml(kind)
     : kind === "money" && state.moneySheet ? moneySheet(state.moneySheet, money.moneyModel())
     : isLearnSheet(kind) ? learnSheet(kind, learn.sheetModel()) : "";
+  // What a recitation sheet was drawn from, so it is drawn again only when that changes (redrawReciteSheet).
+  overlay.dataset.drawn = kind === "recite" || kind === "memorise-done" ? overlay.innerHTML && reciteSheetHtml(kind) : "";
   byId("app").inert = kind !== null;
   if (kind) {
     applySizes(overlay);
@@ -530,6 +568,8 @@ function closeSheet(force = false): void {
   // Closing Talk ends the talk going; the orb stops once its sheet is gone (and lets go of its canvas).
   const closingTalk = state.sheet === "talk";
   if (closingTalk) void talk.stopTalk();
+  // Closing recite to find stops its microphone.
+  if (state.sheet === "recite") recite.sheetClosed();
   state.sheet = null;
   state.word = null;
   releaseHeld();
@@ -765,6 +805,20 @@ function act(action: string, value: string): void {
     case "mushaf-clear": return mushaf.clearWord();
     case "mushaf-retry": return mushaf.retry();
     case "mushaf-download": return void mushaf.downloadAll();
+    // Recitation: the header's microphone opens the sheet; a found ayah's button carries its "sura:ayah".
+    case "recite-open": return void (value ? recite.openFound(value) : recite.openFind());
+    case "recite-download": return void recite.download();
+    case "recite-stop": return recite.stopFind();
+    case "recite-again": return recite.again();
+    case "memorise-start": return void recite.startMemorising();
+    case "memorise-toggle": return recite.toggleListening();
+    case "memorise-peek": return recite.peekWord();
+    case "memorise-done": return recite.finishMemorising();
+    case "memorise-clear": return recite.clearWordSlip(value);
+    case "memorise-keep": return void recite.keepSlips();
+    case "memorise-again": return recite.memoriseAgain();
+    case "memorise-end": return recite.endMemorising();
+    case "memorise-back": return recite.backToPage();
     case "murajaah-setup": return plan.openSetup();
     case "murajaah-all": return plan.chooseAll(value === "on");
     case "copy-goodreads": return void books.copyGoodreadsAddress();
@@ -845,7 +899,8 @@ function holdWord(el: HTMLElement): void {
 
 function handleTap(el: HTMLElement): void {
   const d = el.dataset;
-  if (d.word) return mushaf.openWord(d.word);
+  // While a page is memorised, holding a word does not open its ayah: that would show the hidden words.
+  if (d.word) return state.memorise && state.memorise.phase !== "left" ? undefined : mushaf.openWord(d.word);
   const day = model(new Date()).today.date;
   if (d.go) go(d.go);
   else if (d.mark && (PRAYERS as readonly string[]).includes(d.mark)) {
