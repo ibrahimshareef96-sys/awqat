@@ -277,6 +277,18 @@ li:first-child > .mode-row { border-top: 0; }
   font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
 .dhikr-source .source { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 13px; line-height: 1.9;
   text-align: right; }
+/* Under the Arabic, left to right: how to say it in a plain Latin face that has every mark (ā, ḥ, ʿ), and the English
+   quieter. Nothing here moves: a translation that arrives goes in with the screen held still (ui/meaningView.ts). */
+.dhikr-show { padding-top: 0; }
+.dhikr-meaning { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.dhikr-meaning[hidden], .dhikr-ar[hidden], .foot[hidden] { display: none; }
+/* Isolated, so fetched text can never reorder the words around it. */
+.dhikr-say { display: block; font-family: var(--sans); font-size: 16px; font-weight: 500; line-height: 1.55; color: var(--ink);
+  overflow-wrap: break-word; unicode-bidi: isolate; }
+.dhikr-en { display: block; font-size: 14px; font-weight: 500; line-height: 1.5; color: var(--soft); overflow-wrap: break-word;
+  unicode-bidi: isolate; }
+.dhikr-en-note, .dhikr-meaning-wait { color: var(--muted); }
+.dhikr.done .dhikr-say, .dhikr.done .dhikr-en { color: var(--muted); }
 
 /* Fields */
 .field { width: 100%; min-height: 48px; margin-top: 6px; padding: 0 16px; border-radius: 16px; font-size: 16px;

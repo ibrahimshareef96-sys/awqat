@@ -29,6 +29,10 @@ Duha, Witr and night prayer, and the prayers you owe.
 Fajr until half an hour after sunrise, Maghrib's evening adhkar, Jumu'ah from Maghrib on Thursday, and Istikhara when
 you need it. Each count has a tap ring, and the tasbih goes to a hundred.
 
+**Meaning.** Under each dhikr and du'a, how to say it and what it means in English, with Arabic, Sound and Meaning
+toggles above the list. The texts are fetched on the phone from hisnmuslim.com and, for the Quran items, Quran.com
+(Saheeh International), and credited where they show. None of them is in this repository.
+
 **Quran.** A Madinah mushaf reader, all 604 pages, drawn from the King Fahd Complex page fonts (see "No Quran word is
 typed" below). Pages turn like a book's, with notes on an ayah or a page, a bookmark that follows your reading, a
 daily goal, and a muraja'ah (revision) plan by juz. The whole mushaf can be downloaded for offline reading.
@@ -56,7 +60,8 @@ Nothing of the Quran is typed by hand, generated, or bundled in the app. The mus
 Complex's page fonts (QPC V2, the 1421 print), downloaded once from Quran Foundation's servers and checked against a
 list of hashes before use, so a changed or damaged font never draws a page. A page's words come from Quran
 Foundation's API when the page is opened and are kept for at most seven days, as its developer terms allow. Where a
-dhikr is an ayah (Ayat al-Kursi, the last three surahs), the app opens that page of the mushaf instead of printing it.
+dhikr is an ayah (Ayat al-Kursi, the last three surahs), the app opens that page of the mushaf instead of printing it;
+its transliteration and English come from the same API on the phone, under the same seven days.
 
 ## Build it
 
@@ -84,7 +89,8 @@ Settings that live in `.env.local` (see `.env.example`):
 ## Privacy
 
 Out of the box Awqat talks to no server of its own. It reaches public services only for what you ask of it: Quran
-Foundation for the mushaf's fonts and words, Open Library when you scan or look up a book, and the calendar addresses
+Foundation for the mushaf's fonts and words, hisnmuslim.com and Quran Foundation for the adhkar's English and
+transliteration while Sound or Meaning is on, Open Library when you scan or look up a book, and the calendar addresses
 you add. Your location is rounded to about a kilometre and stays on the phone, unless you use Talk, which sends it to
 Open-Meteo for the weather. Health data is only read; today's step count is kept for the widget. The details are in
 [public/privacypolicy.html](public/privacypolicy.html). If you publish a build with Talk or sync turned on, update the
@@ -94,7 +100,9 @@ iOS privacy manifests (`PrivacyInfo.xcprivacy`) to match.
 
 Prayer times by adhan-js (MIT). Morning and evening adhkar from Seen Arabic's
 [Morning-And-Evening-Adhkar-DB](https://github.com/Seen-Arabic/Morning-And-Evening-Adhkar-DB) (MIT), from Hisn
-al-Muslim. Quran fonts provided by [Quran Foundation](https://quran.foundation), in the King Fahd Complex's script.
+al-Muslim. The adhkar's translation and transliteration from [hisnmuslim.com](https://www.hisnmuslim.com), and for the
+Quran items Saheeh International and the transliteration from [Quran.com](https://quran.com), all fetched on the phone.
+Quran fonts provided by [Quran Foundation](https://quran.foundation), in the King Fahd Complex's script.
 Quran metadata from the [Tanzil Project](https://tanzil.net). Type: Instrument Serif (SIL OFL 1.1). Weather from
 [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Book data from [Open Library](https://openlibrary.org).
 Full notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

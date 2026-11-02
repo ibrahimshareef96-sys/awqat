@@ -10,6 +10,8 @@ import { reminderTarget } from "../src/reminders/plan.ts";
 import { DUBAI } from "./fixtures/places.ts";
 import { addDays, dayTimes } from "../src/prayer/times.ts";
 import { duaSheet, modePrompts, modeView, modesListView, occasionOf, studyView, type ModesModel } from "../src/ui/modesView.ts";
+import type { Meaning } from "../src/faith/meaning.ts";
+import type { AdhkarShow } from "../src/settings.ts";
 
 const days = Array.from({ length: 11 }, (_, i) => dayTimes(DUBAI, addDays({ y: 2026, m: 10, d: 21 }, i), "Dubai"));
 const friday = days[2];
@@ -154,6 +156,51 @@ describe("syncing the modes", () => {
       .toEqual({ fajr: { ten: 7, a: 1 }, maghrib: { b: 2 } });
     expect(merge("modes.place", { page: 297, at: 9 }, { page: 300, at: 5 })).toEqual({ page: 297, at: 9 });
     expect(merge("modes.study", { after: "asr", at: 1 }, { after: "isha", at: 5 })).toEqual({ after: "isha", at: 5 });
+  });
+});
+
+describe("the du'a after the salam, with its meaning", () => {
+  const inFajr = new Date(saturday.fajr.getTime() + 60_000);
+  const credit = { both: "A made-up source", sound: "A made-up source", meaning: "A made-up source" };
+  const said: Meaning = { kind: "text", transliteration: "Made-up <b>saying</b>", translation: "A made-up meaning", credit,
+    wholeAyah: false };
+  const withMeanings = (show: AdhkarShow, log = emptyModeLog()): ModesModel =>
+    ({ ...model(inFajr, log, 3), show, duaMeanings: { istighfar: said, "la-mani": { kind: "pending" }, istikhara: null } });
+  const ALL: AdhkarShow = { arabic: true, sound: true, meaning: true };
+
+  it("puts the toggles above the steps, and the meaning under the du'a's Arabic", () => {
+    const html = modeView(def("fajr"), withMeanings(ALL), "", "", "");
+    expect(html.indexOf('data-action="adhkar-show"')).toBeLessThan(html.indexOf("dhikr-list"));
+    const card = html.slice(html.indexOf('data-step="istighfar"'), html.indexOf('data-step="la-mani"'));
+    expect(card.indexOf("dhikr-ar")).toBeLessThan(card.indexOf("dhikr-say"));
+    expect(card).toContain("Made-up &lt;b&gt;saying&lt;/b&gt;");
+    expect(card).toContain('lang="en"');
+    expect(html).toContain("Getting the translation");
+    expect(html).toContain('data-meaning-credits');
+    expect(html).toContain("A made-up source");
+  });
+
+  it("hides the app's Arabic when it is turned off, but never the user's own words", () => {
+    const log = addOwnDua(emptyModeLog(), "fajr", "Mine", "My own words", 1, "d-1");
+    const html = modeView(def("fajr"), withMeanings({ ...ALL, arabic: false }, log), "", "", "");
+    const card = html.slice(html.indexOf('data-step="istighfar"'), html.indexOf('data-step="la-mani"'));
+    expect(card).not.toContain("dhikr-ar");
+    expect(html).toContain("My own words");
+    // One still waiting for its translation keeps its Arabic, so it has words to say.
+    const waiting = html.slice(html.indexOf('data-step="la-mani"'), html.indexOf('data-step="la-hawla"'));
+    expect(waiting).toContain("dhikr-ar");
+    expect(waiting).toContain("data-fallback");
+  });
+
+  it("has no toggles where no du'a has a meaning to show", () => {
+    expect(modeView(def("istikhara"), withMeanings(ALL), "", "", "")).not.toContain('data-action="adhkar-show"');
+    expect(modeView(def("jumuah"), withMeanings(ALL), "", "", "")).not.toContain('data-action="adhkar-show"');
+    // The Arabic shows there whatever the toggles say elsewhere.
+    expect(modeView(def("istikhara"), withMeanings({ ...ALL, arabic: false }), "", "", "")).toContain("dhikr-ar");
+  });
+
+  it("draws as before without any meanings", () => {
+    expect(modeView(def("fajr"), model(inFajr, emptyModeLog(), 3), "", "", "")).not.toContain("dhikr-meaning");
   });
 });
 

@@ -1,17 +1,21 @@
 /**
  * The adhkar: a card on Home while a set is open and not yet said, a card on Faith for both sets, and each set's list.
  * A dhikr counts with a tap on its words; Done says it in full at once (and again clears it). The Quran items show no
- * Quran: they name the surah and ayahs and open the mushaf at that page.
+ * Quran: they name the surah and ayahs and open the mushaf at that page. Under the words, how to say them and their
+ * meaning, fetched on the phone (faith/meaning.ts), as the list's three toggles say.
  */
 import {
   SESSIONS, SESSION_NAME, adhkarFor, adhkarStreak, adhkarWeek, countOf, isComplete, progress, type AdhkarLog,
   type AdhkarWindow, type Dhikr, type Session,
 } from "../faith/adhkar.ts";
+import type { Meaning } from "../faith/meaning.ts";
 import { SURA_AYAS, SURA_NAMES } from "../quran/data.ts";
 import { pageOfAyah } from "../quran/pages.ts";
 import { formatTime } from "../prayer/times.ts";
+import type { AdhkarShow } from "../settings.ts";
 import { counterHtml, paintCounter, type CounterInput } from "./counter.ts";
 import { esc, icon } from "./html.ts";
+import { SHOW_ALL, arabicShown, creditsLine, meaningBlock, showToggles } from "./meaningView.ts";
 
 /** The sets' names as the book gives them. */
 const SESSION_AR: Readonly<Record<Session, string>> = { morning: "أذكار الصباح", evening: "أذكار المساء" };
@@ -30,7 +34,14 @@ export interface AdhkarScreenModel extends AdhkarCardModel {
   session: Session;
   /** Maghrib of the prayer day, when the end of Al-Baqarah opens; null when the day is not known. */
   maghrib: Date | null;
+  /** What each dhikr shows (Settings); all of it when not given. */
+  show?: AdhkarShow;
+  /** By dhikr id: how to say it and its meaning, on its way, or null for none. */
+  meanings?: Readonly<Record<number, Meaning | null>>;
 }
+
+const meaningOf = (m: AdhkarScreenModel, id: number): Meaning | null | undefined =>
+  (m.meanings && Object.hasOwn(m.meanings, id) ? m.meanings[id] : undefined);
 
 /** When the set is open: its best time while that lasts, then how long it stays open; or when it opens. */
 function whenLine(session: Session, open: AdhkarWindow | null, now: Date, tz: string): string {
@@ -107,30 +118,35 @@ function quranPlace(q: NonNullable<Dhikr["quran"]>): string {
  * What to read, unmistakably: this is Quran, by name and place, with a plain button to it. What is said before it (the
  * refuge in Allah) is small and labelled as that, so it is never taken for the thing itself.
  */
-function quranBlock(item: Dhikr, page: number | null): string {
+function quranBlock(item: Dhikr, page: number | null, show: AdhkarShow, meaning: string): string {
   const q = item.quran as NonNullable<Dhikr["quran"]>;
   const name = esc(item.name);
-  const before = item.text ? `<p class="dhikr-before"><span class="small">Begin with</span><span class="dhikr-before-ar" lang="ar" dir="rtl">` +
-    `${esc(item.text)}</span></p>` : "";
+  const before = item.text && show.arabic ? `<p class="dhikr-before"><span class="small">Begin with</span>` +
+    `<span class="dhikr-before-ar" lang="ar" dir="rtl">${esc(item.text)}</span></p>` : "";
   // The spoken name starts with the words on the button, so Voice Control's "tap Read" finds it.
   const read = page ? `<button type="button" class="pill solid wide dhikr-read" data-go="mushaf:${page}" aria-label="Read ${name}, page ${page}">` +
     `Read it on p. ${page}</button>` : "";
   return `<span class="label">QURAN</span><h3 class="dhikr-quran-name">${name}</h3><p class="dhikr-quran">${esc(quranPlace(q))}. ` +
-    `Read it from the mushaf, then count it here.</p>${before}${read}`;
+    `Read it from the mushaf, then count it here.</p>${before}${meaning}${read}`;
 }
 
-function dhikrItem(item: Dhikr, m: AdhkarScreenModel): string {
+function dhikrItem(item: Dhikr, m: AdhkarScreenModel, show: AdhkarShow): string {
   const n = countOf(m.log, m.date, m.session, item.id);
   const done = n >= item.count;
   const locked = item.night === true && m.maghrib !== null && m.now.getTime() < m.maghrib.getTime();
   const page = item.quran ? pageOfAyah(item.quran.sura, item.quran.from) : null;
   const name = esc(item.name);
-  const words = item.text ? `<span class="dhikr-ar" lang="ar" dir="rtl">${esc(item.text)}</span>` : "";
+  const said = meaningOf(m, item.id);
+  const arabic = arabicShown(said, show);
+  const words = item.text && arabic.shown ? `<span class="dhikr-ar" lang="ar" dir="rtl"${arabic.fallback ? " data-fallback" : ""}>` +
+    `${esc(item.text)}</span>` : "";
+  const meaning = meaningBlock(`a:${item.id}`, said, show);
   // aria-disabled, not disabled: a finished dhikr keeps its focus after the tap that finished it (keep.ts finds it
-  // again), and the action already ignores taps past the count or before Maghrib.
-  const top = item.quran ? quranBlock(item, page)
+  // again), and the action already ignores taps past the count or before Maghrib. How to say it and its meaning sit
+  // inside the words, so a tap on them counts as a tap on the Arabic does.
+  const top = item.quran ? quranBlock(item, page, show, meaning)
     : `<button type="button" class="dhikr-tap" data-action="dhikr" data-value="${item.id}"${done || locked ? ' aria-disabled="true"' : ""}>` +
-      `<span class="dhikr-name">${name}</span>${words}<span class="sr-only">Tap to count</span></button>`;
+      `<span class="dhikr-name">${name}</span>${words}${meaning}<span class="sr-only">Tap to count</span></button>`;
   const wait = locked ? `<p class="small dhikr-wait">After Maghrib, ${esc(formatTime(m.maghrib as Date, m.tz))}</p>` : "";
   return `<li class="card dhikr${done ? " done" : ""}" data-dhikr="${item.id}">${top}` +
     `<span class="dhikr-times" lang="ar" dir="rtl">${esc(item.times)}</span>` +
@@ -199,10 +215,13 @@ export function paintAdhkarTotal(root: ParentNode, done: number, total: number):
 
 export function adhkarView(m: AdhkarScreenModel, head: string, notice: string, chrome: string): string {
   const { done, total } = progress(m.log, m.date, m.session);
+  const show = m.show ?? SHOW_ALL;
+  const list = adhkarFor(m.session);
   return `<main class="screen single">${head}${notice}<section class="card"><div class="split"><span class="numeral">` +
     `<span data-adhkar-done>${done}</span> <span class="soft">of ${total}</span></span><span class="adhkar-title" lang="ar" dir="rtl">` +
     `${SESSION_AR[m.session]}</span></div><span class="bar"><span class="fill" data-adhkar-fill data-w="${Math.round((done / total) * 100)}">` +
-    `</span></span><p class="small">${esc(whenLine(m.session, m.open, m.now, m.tz))}</p></section>` +
-    `<ol class="plain dhikr-list">${adhkarFor(m.session).map((item) => dhikrItem(item, m)).join("")}</ol>` +
-    `<p class="foot">Hisn al-Muslim, from Seen Arabic's morning and evening set (MIT)</p></main>${chrome}`;
+    `</span></span><p class="small">${esc(whenLine(m.session, m.open, m.now, m.tz))}</p></section>${showToggles(show)}` +
+    `<ol class="plain dhikr-list">${list.map((item) => dhikrItem(item, m, show)).join("")}</ol>` +
+    `<p class="foot">Hisn al-Muslim, from Seen Arabic's morning and evening set (MIT)</p>` +
+    `${creditsLine(list.map((item) => meaningOf(m, item.id)), show)}</main>${chrome}`;
 }

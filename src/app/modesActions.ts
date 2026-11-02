@@ -19,6 +19,7 @@ import type { ModesModel } from "../ui/modesView.ts";
 import { feelCount } from "./feel.ts";
 import { WORKOUT_TIMER, applyTaps, dhikrItem, dhikrKey, dhikrOf, nextItem, openDhikr, startWorkoutTimer, stopWorkoutTimer, timerItem,
   type LiveItem, type LiveTap, type OpenDhikr } from "./live.ts";
+import { duaMeanings } from "./meaningActions.ts";
 import * as mushaf from "./mushafActions.ts";
 import { MESSAGES, announce, hooks, save, setNotice, state, today } from "./state.ts";
 
@@ -344,5 +345,6 @@ export function modesModel(now: Date, tz: string): ModesModel {
     log: state.modes, friday: state.friday, adhkar: state.adhkar, learn: state.learn, now, tz, today: date,
     open: windowsNow(now), waiting: waitingNow(context), day: day as NonNullable<typeof day>, removeArmed: state.modeRemoveArmed,
     live: Capacitor.isNativePlatform() && state.settings.live, liveKey: state.liveDhikr,
+    show: state.settings.adhkarShow, duaMeanings: duaMeanings(),
   };
 }

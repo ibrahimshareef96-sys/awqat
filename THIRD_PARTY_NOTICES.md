@@ -62,6 +62,17 @@ Verse keys only, never the Quran's words.
   [developer terms](https://api-docs.quran.foundation/legal/developer-terms/) apply to anyone distributing a build:
   they ask for an active Developer Console account and this credit, and do not allow the fonts to be offered apart
   from the app.
+- **The adhkar's English and transliteration: Hisn al-Muslim, via hisnmuslim.com.** The adhkar lists and the du'a
+  after the salam show each dhikr's translation and transliteration from hisnmuslim.com's developer API
+  (`https://www.hisnmuslim.com/api/en/27.json` and `25.json`), fetched on the phone while Sound or Meaning is on, kept
+  there, asked for again at most once a week, and credited "Translation and transliteration: Hisn al-Muslim,
+  hisnmuslim.com" where they are shown. hisnmuslim.com states no terms for this text, so none of it is in this
+  repository: `src/faith/meaningIds.ts`, built by `scripts/make-meaning-ids.py`, holds only which of their item numbers
+  goes with which dhikr. If you are its publisher and want it credited differently or not used, open an issue.
+- **The Quran items' English and transliteration: Quran.com.** For Ayat al-Kursi, the end of Al-Baqarah, the last
+  three surahs and At-Tawbah 129, the words' transliteration and the Saheeh International translation (resource 20)
+  come from Quran.com's API on the phone, the same API the mushaf uses, under Quran Foundation's developer terms above:
+  kept for at most seven days, credited "Saheeh International" and "Quran.com" where shown, never bundled.
 - **Weather**: [Open-Meteo](https://open-meteo.com), CC BY 4.0, used only in a voice talk.
 - **Book data and covers**: [Open Library](https://openlibrary.org), looked up when you scan or search for a book.
   Covers are saved on the phone and never committed to this repository.

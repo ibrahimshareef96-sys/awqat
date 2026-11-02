@@ -77,6 +77,11 @@ export function takePaintedInPlace(): boolean {
   return was;
 }
 
+/** Something else on screen changed in place (a translation filled in): the next redraw must draw, not skip. */
+export function markPaintedInPlace(): void {
+  paintedInPlace = true;
+}
+
 /** Sets the counter to `n`, in place; `moved` is false when nothing was tapped (a sync, a redraw of the same count). */
 export function paintCounter(button: HTMLElement, n: number, moved = true): void {
   paintedInPlace = true;
