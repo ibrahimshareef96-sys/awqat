@@ -1,8 +1,9 @@
 /**
  * What the app knows about today, in words, for the assistant. Sent as the {{life}} variable when a talk starts:
  * the date, the next prayer and today's times with iqama, the user's prayer marks and adhkar, the calendar for the
- * rest of today and tomorrow, the books being read and the weather. Calendar and book titles are user data from
- * outside the app, so they are cleaned and cut here. The agent's prompt fences the whole block as data.
+ * rest of today and tomorrow, the books being read, the week's intentions and the weather. Calendar and book titles
+ * are user data from outside the app, so they are cleaned and cut here, as the intentions are. The agent's prompt
+ * fences the whole block as data.
  * Pure: the caller passes in state.
  */
 import type { Agenda } from "../agenda/agenda.ts";
@@ -20,6 +21,7 @@ import { monthSummary, type Money } from "../money/money.ts";
 import { dueLessons } from "../learn/review.ts";
 import { PAGES } from "../quran/data.ts";
 import { pagesOn, readingStreak, type QuranLog } from "../quran/log.ts";
+import type { Intention } from "../review/muhasabah.ts";
 import { hijriDate } from "../prayer/hijri.ts";
 import { iqamaAt } from "../prayer/iqama.ts";
 import type { PrayerLog } from "../prayer/log.ts";
@@ -46,6 +48,8 @@ export interface LifeInput {
   health: BodySummary | null;
   /** The user's money, only when the user has allowed the assistant to hear it. */
   money: Money | null;
+  /** The intentions the user set for the week in the Weekly Review, as Home shows them; none, none said. */
+  intentions: readonly Intention[];
 }
 
 /** What one variable may hold: room for a full day, small next to the prompt. */
@@ -162,6 +166,13 @@ function learnLine(input: LifeInput): string {
     `${due ? ` ${due} of the user's own note${due === 1 ? "" : "s"} due for review.` : ""}`;
 }
 
+/** The week's intentions, in one line, each quoted: the user's own words, cleaned as any outside text is. */
+function intentionsLine(input: LifeInput): string[] {
+  if (input.intentions.length === 0) return [];
+  return [`The user's intentions for this week: ${input.intentions.map((i) => `${quoted(i.text, 80)}${i.done ? " (done)" : ""}`)
+    .join("; ")}.`];
+}
+
 /** Steps against the user's own goal, last night's sleep, this week's workouts and what is planned today. */
 function bodyLine(input: LifeInput): string {
   const { body, health } = input;
@@ -194,6 +205,7 @@ export function lifeText(input: LifeInput): string {
     ...calendarLines(input),
     booksLine(input),
     learnLine(input),
+    ...intentionsLine(input),
     bodyLine(input),
     moneyLine(input),
     input.weather ? safe(weatherText(input.weather), 600) : "Weather: not available just now.",

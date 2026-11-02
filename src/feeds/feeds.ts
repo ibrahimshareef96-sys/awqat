@@ -17,7 +17,8 @@ export interface FeedSource { name: string; ok: boolean; why: string }
 export interface MoneyFeed { at: number; items: MoneyItem[]; sources: FeedSource[] }
 
 export interface WorkProject { name: string; group: string; status: string; touched: string; note: string }
-export interface WorkDue { text: string; date: string; late: boolean }
+/** `time` is "HH:MM" on the place's clock when the source gives one with a date, else "". */
+export interface WorkDue { text: string; date: string; time: string; late: boolean }
 export interface WorkWaiting { text: string; date: string; who: string }
 export interface WorkFeed { at: number; projects: WorkProject[]; due: WorkDue[]; waiting: WorkWaiting[] }
 
@@ -72,9 +73,14 @@ const readProject = (r: Record<string, unknown>): WorkProject | null => {
     note: cleanShown(r.note, TEXT_MAX) } : null;
 };
 
+const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 const readDue = (r: Record<string, unknown>): WorkDue | null => {
   const text = cleanShown(r.text, TEXT_MAX);
-  return text ? { text, date: dayOrEmpty(r.date), late: r.late === true } : null;
+  const date = dayOrEmpty(r.date);
+  // A time means nothing without its day.
+  const time = date && typeof r.time === "string" && CLOCK.test(r.time) ? r.time : "";
+  return text ? { text, date, time, late: r.late === true } : null;
 };
 
 const readWaiting = (r: Record<string, unknown>): WorkWaiting | null => {

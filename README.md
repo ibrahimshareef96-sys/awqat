@@ -39,9 +39,15 @@ study timer, lessons to review, and a window after the prayer you choose.
 **Books.** A reading list with a barcode scanner, Open Library covers, pages read, lessons and notes, and a Goodreads
 import.
 
-**The rest of the day.** Your calendars (any iCal address), Body (weight, steps, sleep and workouts from Health
-Connect or Apple Health, read only), Money (income, spending and what is owed, in AED and USD for now), and a Weekly
-Review with separate numbers and never one score.
+**The rest of the day.** Your calendars (any iCal address, with the steps to find it), Body (weight, steps, sleep and
+workouts from Health Connect or Apple Health, read only), and Money (income, spending and what is owed, in AED and USD
+for now).
+
+**The Weekly Review.** A muhasabah in four short steps on one screen: the week's numbers, each on its own and never
+one score; three questions to answer if you want to; up to three intentions for the week ahead, which stay on Home to
+tick; and the next seven days in a few lines. Past weeks stay to read back, and a reminder on the day and time you
+choose is there if you turn it on. What you write stays on the phone; with your own server it syncs to your other
+devices, and with Talk set up the assistant hears the week's intentions, never the reflections.
 
 **On the lock screen.** Home-screen widgets for the next prayer with a countdown and a dhikr counter that works with
 the app closed. On iPhone, Live Activities and the Dynamic Island. On Android, Live Updates.

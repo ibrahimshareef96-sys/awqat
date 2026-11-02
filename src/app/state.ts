@@ -24,6 +24,7 @@ import { emptyLearn, type Learn } from "../learn/learn.ts";
 import { emptyModeLog, type ModeLog } from "../modes/modes.ts";
 import { emptyMoney, type Money } from "../money/money.ts";
 import type { MoneySheetKind } from "../ui/moneyView.ts";
+import { emptyReviewLog, type ReviewDraft, type ReviewLog } from "../review/muhasabah.ts";
 import type { LearnSheet } from "../ui/learnView.ts";
 import { write } from "../store.ts";
 import type { TalkSession } from "../talk/session.ts";
@@ -43,7 +44,8 @@ export interface GuestReading {
 
 export type Screen = "home" | "faith" | "settings" | "quran" | "mushaf" | "books" | "agenda" | "body" | "money" | "work" | "inbox" | "review" | `book:${string}` |
   `adhkar:${Session}` | "learn" | "learn-review" | `learn:${string}` | "modes" | `mode:${string}`;
-export type Sheet = null | "talk" | "add-book" | "new-book" | "word" | "page-note" | "goto" | "murajaah" | "mode-dua" | "money" | LearnSheet;
+export type Sheet = null | "talk" | "add-book" | "new-book" | "word" | "page-note" | "goto" | "murajaah" | "mode-dua" | "money" |
+  "review-past" | LearnSheet;
 
 export const MESSAGES = {
   unsaved: "That could not be saved. Try again.",
@@ -78,6 +80,11 @@ export const state = {
   modesFrom: "home" as "home" | "faith",
   /** The screen the Weekly Review was opened from, where its Back returns. */
   reviewFrom: "home" as "home" | "modes",
+  /** The Weekly Reviews kept (review/muhasabah.ts); the past week open in its sheet; what was typed and not yet kept. */
+  reviews: emptyReviewLog() as ReviewLog,
+  reviewPast: null as string | null,
+  /** Kept in memory only, so leaving the screen before saving loses nothing typed this run. */
+  reviewDraft: null as (ReviewDraft & { week: string }) | null,
   /** The mode the add-a-du'a sheet is for; the du'a whose Remove was tapped once. */
   modeDuaFor: null as string | null,
   modeRemoveArmed: null as string | null,

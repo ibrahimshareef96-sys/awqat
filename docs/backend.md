@@ -30,7 +30,7 @@ device backups (`src/talk/session.ts`), and sends it nowhere else.
 | Route | Called from | What it does |
 |---|---|---|
 | `POST /app/books` | `src/books/sync.ts` | Books: sends the changes since a cursor, returns other devices' changes and a new cursor. |
-| `POST /app/records` | `src/sync/records.ts` | The other records (prayer log, Quran, adhkar, modes, learning, body, money), the same way. |
+| `POST /app/records` | `src/sync/records.ts` | The other records (prayer log, Quran, adhkar, modes, learning, body, money, weekly reviews), the same way. Each is a `kind` and an `id` with its data; a server that keeps any kind it is sent needs no change when the app syncs a new one. |
 | `PUT /app/library` `{ reading }` | `src/books/shelf.ts` | The books in hand, for a "reading now" shelf on another screen. |
 
 The wire formats, and how conflicts resolve (record by record, the newer stamp wins, except where a collection can
@@ -44,12 +44,13 @@ join two versions, such as a prayer day; a removal is sent as a removal), are in
 | `GET /app/feed/money`, `/app/feed/work`, `/app/feed/mail` | `src/feeds/feeds.ts` | The latest copy of each feed, which something else (the author uses a scheduled job on a Mac) puts there. |
 
 The app shows only the fields `src/feeds/feeds.ts` checks, cleans every string it shows, and never sends anything
-back. A mail can try to steer the model that sorted it, so its lines are marked as the model's reading, and links,
+back. What the Work feed has `due` with a `date` (and, if it likes, a `time` as `"HH:MM"` on the user's clock) also
+shows on that day in Agenda and in the Weekly Review's look ahead, read only. A mail can try to steer the model that sorted it, so its lines are marked as the model's reading, and links,
 addresses, phone numbers and codes are stripped.
 
 ## What a server must never do
 
 - Ask for anything but a passphrase to sign in, or keep the passphrase.
 - Send the app HTML, scripts or redirects: the app refuses redirects and treats every reply as data.
-- Keep more than it needs: the app sends a talk's context (prayers, adhkar, calendar, books, and money or health only
-  when those switches are on in Settings) at the start of a talk, for that talk.
+- Keep more than it needs: the app sends a talk's context (prayers, adhkar, calendar, books, the week's intentions, and
+  money or health only when those switches are on in Settings) at the start of a talk, for that talk.

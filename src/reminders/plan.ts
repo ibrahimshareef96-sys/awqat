@@ -26,17 +26,21 @@ export const ADHKAR_SLOT = { morning: 5, evening: 6 } as const;
 /** Friday's two reminders, in the slots after those. */
 export const FRIDAY_SLOT = { morning: 7, lastHour: 8 } as const;
 
+/** The weekly review's reminder, in the last slot (review/reminder.ts). */
+export const REVIEW_SLOT = 9;
+
 export function isReminderId(id: number): boolean {
   const slot = id % 10;
   return Number.isInteger(id) && id >= 190000000 && id < 2 ** 31 &&
     (slot < PRAYERS.length || slot === ADHKAR_SLOT.morning || slot === ADHKAR_SLOT.evening ||
-      slot === FRIDAY_SLOT.morning || slot === FRIDAY_SLOT.lastHour);
+      slot === FRIDAY_SLOT.morning || slot === FRIDAY_SLOT.lastHour || slot === REVIEW_SLOT);
 }
 
 /** The screen a tapped reminder opens: its mode, where it has one. Other reminders just open the app. */
 export function reminderTarget(id: number): string | null {
   if (!isReminderId(id)) return null;
   const slot = id % 10;
+  if (slot === REVIEW_SLOT) return "review";
   if (slot === FRIDAY_SLOT.morning || slot === FRIDAY_SLOT.lastHour) return "mode:jumuah";
   if (slot === ADHKAR_SLOT.morning || slot === PRAYERS.indexOf("fajr")) return "mode:fajr";
   if (slot === PRAYERS.indexOf("maghrib")) return "mode:maghrib";

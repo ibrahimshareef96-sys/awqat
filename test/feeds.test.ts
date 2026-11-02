@@ -150,6 +150,14 @@ describe("the work feed", () => {
     expect(html).toContain("From the feed source, 12 min ago");
   });
 
+  it("reads a due item's time when it is one, on the day's own clock, and shows it", () => {
+    const f = readWorkFeed({ ...raw, due: [{ text: "Call", date: "2026-11-04", time: "14:30", late: false },
+      { text: "Bad time", date: "2026-11-04", time: "2:30pm" }, { text: "Time, no day", date: "", time: "09:00" },
+      { text: "No time", date: "2026-11-04" }] });
+    expect(f?.due.map((d) => d.time)).toEqual(["14:30", "", "", ""]);
+    expect(workView({ feed: f, status: "ok", now: 1000 }, "", "", "")).toContain("Due 4 Nov, 14:30");
+  });
+
   it("says what is wrong when there is nothing to show", () => {
     const empty = (status: "signin" | "missing" | "offline" | "empty" | "app-only") => workView({ feed: null, status, now: 0 }, "", "", "");
     expect(empty("signin")).toContain("Sign in to Talk");

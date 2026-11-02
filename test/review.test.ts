@@ -8,8 +8,12 @@ import { sampleLearn as seedLearn, TRADING_ID } from "./fixtures/learn.ts";
 import { addCommitment, addIncome, addOwed, emptyMoney, setGoal } from "../src/money/money.ts";
 import { emptyLog, setMark } from "../src/prayer/log.ts";
 import { emptyQuranLog, logRead } from "../src/quran/log.ts";
-import { morningBrief, weekReview, type ReviewInput } from "../src/review/week.ts";
-import { briefCard, weekReviewView as reviewView } from "../src/ui/reviewView.ts";
+import { morningBrief, weekReview, type ReviewInput, type WeekReview } from "../src/review/week.ts";
+import { emptyReviewLog, saveReview, toggleIntention } from "../src/review/muhasabah.ts";
+import { DEFAULT_REVIEW_REMINDER } from "../src/review/reminder.ts";
+import {
+  briefCard, homeWeekCard, pastReviewSheet, reviewReminderFields, weekReviewView, type ReviewScreen,
+} from "../src/ui/reviewView.ts";
 
 const TODAY = "2026-10-30";
 
@@ -17,6 +21,18 @@ function input(patch: Partial<ReviewInput> = {}): ReviewInput {
   return { today: TODAY, prayerDay: TODAY, prayersDueToday: 5, prayers: emptyLog(), quran: emptyQuranLog(), adhkar: emptyAdhkarLog(), learn: seedLearn(), body: emptyBody(),
     health: null, money: emptyMoney(), ...patch };
 }
+
+function screen(numbers: WeekReview, patch: Partial<ReviewScreen> = {}): ReviewScreen {
+  return { numbers, form: { well: "", short: "", change: "", intentions: [] }, kept: false,
+    ahead: ["Friday 30 October: Jumu'ah, and Surah Al-Kahf"], past: [], busy: false, syncs: false, talk: false, ...patch };
+}
+
+/** The Weekly Review's screen for the week's numbers, with nothing else changed. */
+const reviewView = (r: WeekReview, head: string, notice: string, chrome: string): string =>
+  weekReviewView(screen(r), head, notice, chrome);
+
+/** The text a screen reads as, tags left out. */
+const words = (html: string): string => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 describe("the week", () => {
   it("counts prayers, on time, late and not marked", () => {
@@ -84,6 +100,125 @@ describe("the screen", () => {
     const html = reviewView(weekReview(input({ body })), "", "", "");
     expect(html).not.toContain("Steps a day");
     expect(html).not.toContain("<i>Row</i>");
+  });
+});
+
+describe("the four steps", () => {
+  const numbers = weekReview(input());
+
+  it("are on one screen in order: look back, reflect, intentions, look ahead", () => {
+    const text = words(weekReviewView(screen(numbers), "", "", ""));
+    const at = ["LOOK BACK", "REFLECT", "INTENTIONS", "LOOK AHEAD"].map((step) => text.indexOf(step));
+    expect(at.every((i) => i >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(text.indexOf("Prayers on time")).toBeGreaterThan(at[0]);
+    expect(text.indexOf("Prayers on time")).toBeLessThan(at[1]);
+  });
+
+  it("asks the three questions in labelled fields of at most 600 characters, and three short intentions", () => {
+    const html = weekReviewView(screen(numbers), "", "", "");
+    for (const [id, label] of [["rv-well", "What went well, alhamdulillah?"], ["rv-short", "What fell short, and what got in the way?"],
+      ["rv-change", "What will you change next week?"]]) {
+      expect(html).toContain(`<label class="prompt" for="${id}">${label}</label>`);
+      expect(html).toMatch(new RegExp(`<textarea id="${id}"[^>]* maxlength="600"`));
+    }
+    expect(html.match(/name="intention"/g)).toHaveLength(3);
+    expect(html.match(/maxlength="80"/g)).toHaveLength(3);
+    for (const n of [1, 2, 3]) expect(html).toContain(`for="rv-i${n}"`);
+    expect(html).toContain('data-form="review"');
+    expect(html).toMatch(/<button type="submit" id="rv-save" class="pill solid"/);
+  });
+
+  it("fills the form from what is kept or typed, escaped", () => {
+    const html = weekReviewView(screen(numbers, { kept: true, form: { well: "<b>Fajr</b>\nat the mosque", short: "", change: "",
+      intentions: ["Walk & read", "x\" onfocus=\"alert(1)"] } }), "", "", "");
+    expect(html).toContain("&lt;b&gt;Fajr&lt;/b&gt;\nat the mosque</textarea>");
+    expect(html).toContain('value="Walk &amp; read"');
+    expect(html).not.toContain('onfocus="alert(1)"');
+    expect(html).toContain("Save changes");
+    expect(weekReviewView(screen(numbers), "", "", "")).toContain("Keep this review");
+  });
+
+  it("disables saving while the app is busy, and says a notice by the button", () => {
+    const html = weekReviewView(screen(numbers, { busy: true }), "", '<p class="notice">Kept.</p>', "");
+    expect(html).toMatch(/id="rv-save"[^>]* disabled/);
+    expect(html.indexOf("Kept.")).toBeGreaterThan(html.indexOf("LOOK AHEAD"));
+    expect(html.indexOf("Kept.")).toBeLessThan(html.indexOf('id="rv-save"'));
+  });
+
+  it("looks ahead in escaped lines, and lists past weeks to open, newest first", () => {
+    const html = weekReviewView(screen(numbers, { ahead: ["Work due: Wed <i>Plan</i>"],
+      past: [{ week: "2026-10-19", line: "Slept <late>" }, { week: "2026-10-12", line: "Walked" }] }), "", "", "");
+    expect(html).toContain("Work due: Wed &lt;i&gt;Plan&lt;/i&gt;");
+    expect(html).toContain('data-action="review-past" data-value="2026-10-19"');
+    expect(words(html)).toContain("Week of 19 October 2026 Slept <late>".replace("<late>", "&lt;late&gt;"));
+    expect(html.indexOf("2026-10-19")).toBeLessThan(html.indexOf("2026-10-12"));
+    expect(weekReviewView(screen(numbers), "", "", "")).not.toContain("PAST REVIEWS");
+  });
+
+  it("uses no streak or score words, no dashes and no exclamation marks", () => {
+    const html = weekReviewView(screen(numbers, { past: [{ week: "2026-10-19", line: "x" }] }), "", "", "");
+    // En and em dashes are built from code points: typed escapes can turn into the characters they name.
+    expect(words(html)).not.toMatch(new RegExp(`streak|in a row|points|\\bscore\\b(?! *\\.)|[${String.fromCodePoint(0x2013, 0x2014)}!]`, "i"));
+    expect(html).toContain("Nothing here is a score");
+  });
+
+  it("says where what is written is kept, and that the assistant hears the intentions where Talk is set up", () => {
+    const plain = words(weekReviewView(screen(numbers), "", "", ""));
+    expect(plain).toMatch(/stays on this (phone|iPad)/);
+    expect(plain).not.toContain("assistant");
+    expect(words(weekReviewView(screen(numbers, { syncs: true }), "", "", ""))).toContain("your own server");
+    expect(words(weekReviewView(screen(numbers, { talk: true }), "", "", ""))).toContain("the assistant, it hears them too");
+  });
+});
+
+describe("a past review, read back", () => {
+  const kept = saveReview(emptyReviewLog(), { well: "Prayed <b>Fajr</b>\nmost days", short: "", change: "Sleep earlier",
+    intentions: ["Walk", "Call home"] }, "2026-10-20");
+  if ("error" in kept) throw new Error(kept.error);
+  const log = toggleIntention(kept.log, "2026-10-19", 1);
+
+  it("opens in a sheet with what was written, escaped, and the intentions ticked", () => {
+    const html = pastReviewSheet(log.reviews[0]);
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('aria-modal="true"');
+    expect(html).toContain("Week of 19 October 2026");
+    expect(html).toContain("What went well, alhamdulillah?");
+    expect(html).toContain("Prayed &lt;b&gt;Fajr&lt;/b&gt;\nmost days");
+    expect(html).not.toContain("What fell short");
+    expect(words(html)).toContain("Call home, done");
+    expect(words(html)).not.toContain("Walk, done");
+    expect(html).toContain('data-go="close"');
+  });
+});
+
+describe("Home's card for the week", () => {
+  it("shows nothing without intentions, and each one as a toggle that can be ticked", () => {
+    expect(homeWeekCard(null)).toBe("");
+    const html = homeWeekCard({ week: "2026-10-26", intentions: [{ text: "Walk <after> Asr", done: true }, { text: "Call home", done: false }] });
+    expect(html).toContain("THIS WEEK");
+    expect(html).toContain('data-action="intention-tick" data-value="2026-10-26:0" aria-pressed="true"');
+    expect(html).toContain('data-value="2026-10-26:1" aria-pressed="false"');
+    expect(html).toContain("Walk &lt;after&gt; Asr");
+    expect(html.match(/<button type="button"/g)).toHaveLength(2);
+  });
+});
+
+describe("the reminder in Settings", () => {
+  it("is off by default, with its day and time only once it is on", () => {
+    const off = reviewReminderFields(DEFAULT_REVIEW_REMINDER);
+    expect(off).toContain("Weekly review reminder");
+    expect(off).toContain('data-field="review-reminder"');
+    expect(off).not.toContain(" checked");
+    expect(off).not.toContain("review-day");
+    const on = reviewReminderFields({ on: true, weekday: 5, time: "21:15" });
+    expect(on).toContain(" checked");
+    expect(on).toContain('<label class="small" for="review-day">Day</label>');
+    expect(on).toContain('<option value="5" selected>Friday</option>');
+    expect(on.indexOf(">Monday<")).toBeLessThan(on.indexOf(">Sunday<"));
+    expect(on).toContain('<label class="small" for="review-time">Time</label>');
+    expect(on).toContain('type="time"');
+    expect(on).toContain('value="21:15"');
   });
 });
 

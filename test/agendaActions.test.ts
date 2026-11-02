@@ -86,6 +86,82 @@ describe("adding a calendar", () => {
   });
 });
 
+describe("opening Agenda", () => {
+  // Opening the screen (or the app coming back) calls refreshAgenda() with no force: a read only when it is due.
+  it("reads nothing while the copy is 15 minutes old or less, and reads once it is older", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    state.place = { ...state.place, tz: "Asia/Dubai" };
+    await addCalendarAddress(A);
+    mocks.fetch.mockClear();
+    vi.setSystemTime(NOW + 15 * 60 * 1000);
+    await refreshAgenda();
+    expect(fetched()).toEqual([]);
+    vi.setSystemTime(NOW + 15 * 60 * 1000 + 1);
+    await refreshAgenda();
+    expect(fetched()).toEqual([A]);
+  });
+
+  it("never reads twice at once: an open while a read runs waits for it", async () => {
+    await addCalendarAddress(A);
+    mocks.fetch.mockClear();
+    const slow = pending<{ text: string }>();
+    mocks.fetch.mockReturnValueOnce(slow.promise);
+    const first = refreshAgenda(true);
+    await refreshAgenda();
+    await refreshAgenda(true);
+    slow.settle({ text: ICS });
+    await first;
+    expect(fetched()).toEqual([A]);
+    expect(state.agendaReading).toBe(false);
+  });
+
+  it("reads a fresh copy again once the place's time zone has changed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    state.place = { ...state.place, tz: "Asia/Dubai" };
+    await addCalendarAddress(A);
+    mocks.fetch.mockClear();
+    state.place = { ...state.place, tz: "Europe/London" };
+    vi.setSystemTime(NOW + 60 * 1000);
+    await refreshAgenda();
+    expect(fetched()).toEqual([A]);
+    expect(state.agenda.reads[0].tz).toBe("Europe/London");
+  });
+
+  it("reads the whole pass in the zone it began in, though the place changes during it", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    state.place = { ...state.place, tz: "Asia/Dubai" };
+    await addCalendarAddress(A);
+    await addCalendarAddress(B);
+    const slow = pending<{ text: string }>();
+    mocks.fetch.mockReturnValueOnce(slow.promise);
+    const reading = refreshAgenda(true);
+    state.place = { ...state.place, tz: "Europe/London" };
+    slow.settle({ text: ICS });
+    await reading;
+    expect(state.agenda.reads.map((r) => r.tz)).toEqual(["Asia/Dubai", "Asia/Dubai"]);
+    mocks.fetch.mockClear();
+    await refreshAgenda();
+    expect(fetched()).toEqual([A, B]);
+  });
+});
+
+describe("Work due on the Agenda", () => {
+  it("comes from the Work feed only with a backend set, and only items with a day", async () => {
+    const { agendaModel, workDue } = await import("../src/app/agendaActions.ts");
+    const due = [{ text: "A", date: "2026-10-30", time: "", late: false }, { text: "B", date: "", time: "", late: false }];
+    state.feeds = { ...state.feeds, work: { feed: { at: 1, projects: [], due, waiting: [] }, status: "ok" } };
+    state.settings = { ...state.settings, voiceUrl: "" };
+    expect(workDue()).toEqual([]);
+    state.settings = { ...state.settings, voiceUrl: "https://worker.example" };
+    expect(workDue().map((d) => d.text)).toEqual(["A"]);
+    expect(agendaModel(new Date(NOW)).due.map((d) => d.text)).toEqual(["A"]);
+    state.settings = { ...state.settings, voiceUrl: "" };
+  });
+});
+
 describe("reading and removing", () => {
   it("reads a calendar added while the others were being read, in that same read", async () => {
     await addCalendarAddress(A);

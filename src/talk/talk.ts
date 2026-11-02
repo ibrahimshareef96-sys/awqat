@@ -25,6 +25,7 @@ import { hooks, setNotice, state, today, type TalkPhase } from "../app/state.ts"
 import { heardHim, logFromTalk, startTalkLog, undoFromTalk } from "../app/talkLog.ts";
 import { healthNow } from "../app/bodyActions.ts";
 import { lifeText } from "./life.ts";
+import { homeIntentions } from "../review/muhasabah.ts";
 import { askMicrophone, micRefused } from "./mic.ts";
 import { loadConversation } from "./sdk.ts";
 import { QUIET, SILENT, bandsOf, loudness, type VoiceSignal } from "./signal.ts";
@@ -217,7 +218,8 @@ function lifeNow(weather: Weather | null): string {
     const place = state.place.source === "default" ? `${state.place.label}, as no place is set yet` : state.place.label;
     return lifeText({ now: new Date(), today: today(), tz: state.place.tz, place, days: state.days,
       log: state.log, adhkar: state.adhkar, agenda: state.agenda, library: state.library, weather, quran: state.quran,
-      learn: state.learn, body: state.body, health: state.settings.assistantHealth ? healthNow() : null, money: state.settings.assistantMoney ? state.money : null });
+      learn: state.learn, body: state.body, health: state.settings.assistantHealth ? healthNow() : null, money: state.settings.assistantMoney ? state.money : null,
+      intentions: homeIntentions(state.reviews, today())?.intentions ?? [] });
   } catch {
     return "";
   }

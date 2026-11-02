@@ -2,6 +2,7 @@
 import { IQAMA_MINUTES, cleanIqama, type IqamaMinutes } from "./prayer/iqama.ts";
 import { isMethod, methodForTimeZone, type MethodId } from "./prayer/method.ts";
 import { PRAYERS, type PrayerName } from "./prayer/times.ts";
+import { DEFAULT_REVIEW_REMINDER, cleanReviewReminder, type ReviewReminder } from "./review/reminder.ts";
 import { cleanWorkerUrl } from "./voice.ts";
 
 export interface Settings {
@@ -14,6 +15,8 @@ export interface Settings {
   fridayReminders: boolean;
   /** A reminder for Adhkar al-Sabah after Fajr and Adhkar al-Masa after Asr, until that day's set is complete. */
   adhkarReminders: boolean;
+  /** A reminder for the Weekly Review on a day and at a time the user picks; off until turned on. */
+  reviewReminder: ReviewReminder;
   /** Each prayer reminder plays the adhan (Fajr its own), in a build that ships one (device.ts); off, the system's sound. */
   adhan: boolean;
   /** The assistant may hear the user's money and log it. Off until allowed: amounts pass through the voice service. */
@@ -40,6 +43,7 @@ export function defaultSettings(): Settings {
     reminders: { fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true },
     fridayReminders: true,
     adhkarReminders: true,
+    reviewReminder: { ...DEFAULT_REVIEW_REMINDER },
     adhan: true,
     assistantMoney: false,
     assistantHealth: false,
@@ -75,6 +79,7 @@ export function parseSettings(json: string | null): Settings {
       reminders,
       fridayReminders: raw.fridayReminders !== false,
       adhkarReminders: raw.adhkarReminders !== false,
+      reviewReminder: cleanReviewReminder(raw.reviewReminder),
       adhan: raw.adhan !== false,
       assistantMoney: raw.assistantMoney === true,
       assistantHealth: raw.assistantHealth === true,

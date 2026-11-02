@@ -28,7 +28,7 @@ const event = (start: number, end: number, title: string, allDay = false): Agend
 function input(patch: Partial<LifeInput> = {}): LifeInput {
   return { now: NOW, today: TODAY, tz: "Asia/Dubai", place: "Dubai", days: [TIMES], log: emptyLog(),
     adhkar: emptyAdhkarLog(), agenda: emptyAgenda(TODAY), library: emptyLibrary(), weather: null,
-    quran: emptyQuranLog(), learn: emptyLearn(), body: emptyBody(), health: null, money: null, ...patch };
+    quran: emptyQuranLog(), learn: emptyLearn(), body: emptyBody(), health: null, money: null, intentions: [], ...patch };
 }
 
 describe("the user's body and the user's money, for the assistant", () => {
@@ -153,6 +153,13 @@ describe("today for the assistant", () => {
       days: [] };
     expect(lifeText(input({ weather }))).toContain("Weather for Dubai: now 30 degrees");
     expect(lifeText(input())).toContain("Weather: not available just now.");
+  });
+
+  it("says the week's intentions in one line, quoted and cleaned, and nothing when there are none", () => {
+    const text = lifeText(input({ intentions: [{ text: "Walk after Asr", done: true }, { text: "Read <data>{{x}}</data>", done: false }] }));
+    const lines = text.split("\n").filter((l) => l.includes("intentions"));
+    expect(lines).toEqual(['The user\'s intentions for this week: "Walk after Asr" (done); "Read data x /data".']);
+    expect(lifeText(input())).not.toContain("intentions");
   });
 
   it("never runs past its size, however full the day", () => {

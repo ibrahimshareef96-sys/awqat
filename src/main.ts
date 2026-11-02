@@ -77,6 +77,9 @@ import { bodyView, stepsLine } from "./ui/bodyView.ts";
 import { moneySheet, moneyView } from "./ui/moneyView.ts";
 import { briefCard, weekReviewView } from "./ui/reviewView.ts";
 import { morningBrief, weekReview, type ReviewInput } from "./review/week.ts";
+import * as review from "./app/reviewActions.ts";
+import { checkReviewLog } from "./review/muhasabah.ts";
+import { REMINDER_FIELDS, withReminderField } from "./review/reminder.ts";
 import { eventsOn } from "./agenda/agenda.ts";
 import { cleanShown } from "./talk/text.ts";
 import { checkMoney } from "./money/money.ts";
@@ -132,7 +135,7 @@ function model(now: Date): ViewModel {
     learn: state.learn, date: today(), modes: modes.modesModel(now, state.place.tz), adhkar: state.adhkar,
     adhkarOpen: adhkarWindow(days, now), murajaah: state.murajaah,
     body: body.bodyModel(now), agenda: agenda.agendaModel(now), worker: workerUrl(state.settings.voiceUrl), talkSignedIn: talk.signedInToTalk(),
-    records: recordsMessage(state.recordsNote, state.place.tz), placeError: state.placeError,
+    records: recordsMessage(state.recordsNote, state.place.tz), placeError: state.placeError, week: review.weekCard(),
   };
 }
 
@@ -171,8 +174,8 @@ function screenHtml(v: ViewModel): string {
   if (s === "books") return booksView(booksModel, header("Books", "Everything you read and study"), noticeLine(v), chrome());
   if (s === "agenda") return agendaView(v.agenda, header("Agenda", "Your days, with the prayers between"), noticeLine(v), chrome());
   if (s === "review") {
-    return weekReviewView(weekReview(reviewInput(v.now, v.today)), header("Weekly Review", "Your own records, added up", state.reviewFrom, screenBackLabel(state.reviewFrom)),
-      noticeLine(v), chrome());
+    return weekReviewView(review.reviewModel(v.now, weekReview(reviewInput(v.now, v.today))),
+      header("Weekly Review", "Look back, reflect, look ahead", state.reviewFrom, screenBackLabel(state.reviewFrom)), noticeLine(v), chrome());
   }
   if (s === "money") return moneyView(money.moneyModel(), header("Money", "What came in, what is owed, what goes out"), noticeLine(v), chrome());
   if (s === "body") {
@@ -430,6 +433,7 @@ function renderOverlay(): void {
     : kind === "murajaah" ? murajaahSheet(state.murajaah)
     : kind === "mode-dua" ? duaSheetFor(state.modeDuaFor)
     : kind === "money" && state.moneySheet ? moneySheet(state.moneySheet, money.moneyModel())
+    : kind === "review-past" ? review.pastSheet()
     : isLearnSheet(kind) ? learnSheet(kind, learn.sheetModel()) : "";
   byId("app").inert = kind !== null;
   if (kind) {
@@ -515,6 +519,7 @@ function flushFields(): void {
   if (worker && worker.value.trim() !== state.settings.voiceUrl) void voice.setWorker(worker.value).then(() => syncShelf());
   const notes = document.getElementById("commentary") as HTMLTextAreaElement | null;
   if (notes) books.saveCommentary(notes.value);
+  review.keepReviewDraft();
 }
 
 /** `force` once what the sheet held is saved. Otherwise a typed note is never lost to one stray tap or Back. */
@@ -652,8 +657,9 @@ function show(target: string): void {
   if (backToAdhkar) window.scrollTo(0, adhkarScroll);
   else if (backToMode) window.scrollTo(0, modeScroll);
   else if (!backToList) window.scrollTo(0, 0);
-  // Opening a screen reads what it shows when the copy is old: the calendars, or the health store.
-  if (target === "agenda") void agenda.refreshAgenda();
+  // Opening a screen reads what it shows when the copy is old: the calendars (the Weekly Review looks ahead at them too),
+  // or the health store.
+  if (target === "agenda" || target === "review") void agenda.refreshAgenda();
   if (target === "body") void body.openBody();
   const feed = feedOfScreen(target);
   if (feed) void refreshFeed(feed);
@@ -664,7 +670,7 @@ function show(target: string): void {
   }
   // Faith, Quran and Learn opened: the user's records sync (at most every half minute), so they show the user's other devices' work.
   if (target === "faith" || target === "quran" || target === "learn" || target === "modes" || target === "money" || target === "body" ||
-    target.startsWith("mode:")) {
+    target === "review" || target.startsWith("mode:")) {
     syncRecordsSoon();
   }
 }
@@ -771,6 +777,8 @@ function act(action: string, value: string): void {
     case "books-more": return books.showMore();
     case "book-search-clear": return books.searchLibrary("");
     case "books-covers": return void covers.findCovers();
+    case "intention-tick": return void review.tickIntention(value);
+    case "review-past": return review.openPastReview(value);
     case "agenda-day": return agenda.pickDay(value);
     case "agenda-refresh": return void agenda.refreshAgenda(true);
     case "calendar-remove": return void agenda.removeCalendarTap(value);
@@ -885,6 +893,7 @@ function onSubmit(event: SubmitEvent): void {
   else if (kind === "book-page") books.logPage(Number(text("page")), text("note"));
   else if (kind === "book-lesson") books.addLessonNow(text("text"));
   else if (kind === "calendar-add") void agenda.addCalendarAddress(text("ical-url"));
+  else if (kind === "review") void review.submitReview(data);
   else if (kind === "weight-add") void body.addTypedWeight(text("kg"));
   else if (kind === "workout-target") void body.setWeeklyTarget(text("target"));
   else if (kind === "step-goal") void body.setStepGoalText(text("goal"));
@@ -930,6 +939,9 @@ function onChange(event: Event): void {
     void setSettings({ ...state.settings, fridayReminders: (el as HTMLInputElement).checked }, true);
   } else if (field === "adhkar-reminders") {
     void setSettings({ ...state.settings, adhkarReminders: (el as HTMLInputElement).checked }, true);
+  } else if (field && REMINDER_FIELDS.has(field)) {
+    const reviewReminder = withReminderField(state.settings.reviewReminder, field, el.value, (el as HTMLInputElement).checked);
+    if (reviewReminder !== state.settings.reviewReminder) void setSettings({ ...state.settings, reviewReminder }, true);
   } else if (field === "adhan") {
     void setSettings({ ...state.settings, adhan: (el as HTMLInputElement).checked }, true);
   } else if (field === "book-pages") {
@@ -1025,7 +1037,7 @@ function onResume(): void {
 async function load(): Promise<boolean> {
   const keys = [KEYS.log, KEYS.settings, KEYS.place, KEYS.quran, KEYS.library, KEYS.friday, KEYS.adhkar, KEYS.mushaf,
     KEYS.murajaah, KEYS.agenda, KEYS.body, KEYS.bookSync, KEYS.learn, KEYS.modes, KEYS.money,
-    KEYS.recordsSync] as const;
+    KEYS.recordsSync, KEYS.reviews] as const;
   const [reads, calendarsRead] = await Promise.all([Promise.all(keys.map((k) => read(k))), readCalendarsFile()]);
   const raw = Object.fromEntries(keys.map((k, i) => [k, reads[i]])) as Record<(typeof keys)[number], ReadResult>;
   keys.forEach((key) => { if (!raw[key].ok) state.blocked.add(key); });
@@ -1038,6 +1050,7 @@ async function load(): Promise<boolean> {
   const adhkarLog = checkAdhkarLog(raw[KEYS.adhkar].value);
   const marks = checkMarks(raw[KEYS.mushaf].value);
   const murajaah = checkPlan(raw[KEYS.murajaah].value);
+  const reviews = checkReviewLog(raw[KEYS.reviews].value);
   // The calendars' addresses are secrets: never copied aside (calendarStore.ts). A file that is there but cannot be read
   // is left alone for the session, as other records are; one from a test build's settings store is moved in.
   let calendarsText = calendarsRead.ok ? calendarsRead.value : null;
@@ -1051,7 +1064,7 @@ async function load(): Promise<boolean> {
     [KEYS.friday, fridayLog.damaged], [KEYS.modes, modeLog.damaged], [KEYS.money, moneyLog.damaged], [KEYS.adhkar, adhkarLog.damaged],
     [KEYS.mushaf, marks.damaged],
     [KEYS.murajaah, murajaah.damaged],
-    [KEYS.body, bodyLog.damaged], [KEYS.learn, learnLog.damaged]] as const;
+    [KEYS.body, bodyLog.damaged], [KEYS.learn, learnLog.damaged], [KEYS.reviews, reviews.damaged]] as const;
   for (const [key, isDamaged] of damaged) {
     const value = raw[key].value;
     // A damaged value with no copy kept aside is never written over this session.
@@ -1066,6 +1079,7 @@ async function load(): Promise<boolean> {
   state.adhkar = adhkarLog.log;
   state.mushaf = marks.marks;
   state.murajaah = murajaah.plan;
+  state.reviews = reviews.log;
   state.calendars = calendars.list;
   state.body = bodyLog.log;
   state.learn = learnLog.learn;

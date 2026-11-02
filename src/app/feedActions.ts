@@ -88,9 +88,10 @@ export async function refreshFeed(kind: FeedKind, asked = false, now = Date.now(
   }
 }
 
-/** The feed a screen shows, if it shows one. */
+/** The feed a screen shows, if it shows one: Agenda and the Weekly Review show what the Work feed has due. */
 export const feedOfScreen = (screen: string): FeedKind | null =>
-  (screen === "money" ? "money" : screen === "work" ? "work" : screen === "inbox" ? "mail" : null);
+  (screen === "money" ? "money" : screen === "work" || screen === "agenda" || screen === "review" ? "work"
+    : screen === "inbox" ? "mail" : null);
 
 export const isFeedKind = (value: string): value is FeedKind => (FEED_KINDS as readonly string[]).includes(value);
 

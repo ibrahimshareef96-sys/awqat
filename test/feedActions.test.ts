@@ -8,7 +8,7 @@ vi.mock("@capacitor/core", () => ({
 }));
 vi.mock("../src/talk/session.ts", async (real) => ({ ...(await real<typeof import("../src/talk/session.ts")>()), clearSession: vi.fn(async () => undefined) }));
 
-import { FEED_GAP_MS, forgetFeeds, keepFeedsToSession, refreshFeed } from "../src/app/feedActions.ts";
+import { FEED_GAP_MS, feedOfScreen, forgetFeeds, keepFeedsToSession, refreshFeed } from "../src/app/feedActions.ts";
 import { hooks, state } from "../src/app/state.ts";
 import type { Get } from "../src/feeds/feeds.ts";
 
@@ -24,6 +24,17 @@ beforeEach(() => {
   state.settings = { ...state.settings, voiceUrl: WORKER };
   session = { token: TOKEN, worker: WORKER } as never;
   state.talk = { ...state.talk, sessionRead: true, session };
+});
+
+describe("the feed a screen reads", () => {
+  it("is the Work feed for Work, and for Agenda and the Weekly Review, which show what is due", () => {
+    expect(feedOfScreen("work")).toBe("work");
+    expect(feedOfScreen("agenda")).toBe("work");
+    expect(feedOfScreen("review")).toBe("work");
+    expect(feedOfScreen("money")).toBe("money");
+    expect(feedOfScreen("inbox")).toBe("mail");
+    expect(feedOfScreen("home")).toBeNull();
+  });
 });
 
 describe("reading a feed", () => {

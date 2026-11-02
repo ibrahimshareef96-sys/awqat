@@ -1,9 +1,13 @@
-/** Agenda: the week strip, a day with its prayers between the meetings, the calendars in Settings, and Home's card. */
+/**
+ * Agenda: the week strip, a day with its prayers between the meetings and the work due, the steps to find a calendar's
+ * address, the calendars in Settings, and Home's card.
+ */
 import { CALENDARS_MAX, maskAddress, type Calendar } from "../agenda/calendars.ts";
 import {
   AGENDA_DAYS, eventsOn, nextUp, timeline, updatedAt, type Agenda, type CalendarRead, type ReadProblem, type Row,
 } from "../agenda/agenda.ts";
 import { daysFrom, keyOf } from "../agenda/days.ts";
+import type { WorkDue } from "../feeds/feeds.ts";
 import { PRAYER_LABEL, formatTime, type DayTimes } from "../prayer/times.ts";
 import { untilPhrase } from "../prayer/window.ts";
 import { deviceWord } from "./deviceWord.ts";
@@ -22,6 +26,8 @@ export interface AgendaModel {
   reading: boolean;
   busy: boolean;
   removeArmed: string | null;
+  /** What the user's Work feed has due, with a day; empty without a backend. */
+  due: readonly WorkDue[];
 }
 
 const PROBLEM_TEXT: Readonly<Record<ReadProblem, string>> = {
@@ -59,6 +65,12 @@ function rowHtml(m: AgendaModel, row: Row): string {
     return `<div class="row-item prayer-row${row.past ? " past" : ""}"><span class="label">${esc(PRAYER_LABEL[row.name])}` +
       `</span><span class="mono">${time(m, row.at)}</span></div>`;
   }
+  if (row.kind === "due") {
+    // Read only, from the user's own feed: nothing here can be ticked or changed.
+    return `<div class="row-item due-row${row.past ? " past" : ""}"><span class="col grow"><span class="title">` +
+      `${esc(row.item.text)}</span></span><span class="col end"><span class="label">DUE</span>` +
+      `${row.at === null ? "" : `<span class="mono">${time(m, row.at)}</span>`}</span></div>`;
+  }
   const e = row.event;
   const when = e.allDay ? "All day" : `${time(m, e.start)} to ${time(m, e.end)}`;
   return `<div class="row-item event-row${row.past ? " past" : ""}${row.now ? " now" : ""}"><span class="col grow">` +
@@ -69,11 +81,12 @@ function rowHtml(m: AgendaModel, row: Row): string {
 
 function dayCard(m: AgendaModel): string {
   const prayers = m.days.find((d) => d.date === m.day);
-  const rows = timeline(m.agenda, m.day, prayers, m.tz, m.now);
+  const rows = timeline(m.agenda, m.day, prayers, m.tz, m.now, m.due);
   const meetings = rows.filter((r) => r.kind === "event").length;
+  const due = rows.filter((r) => r.kind === "due").length;
   return `<section class="card"><div class="split"><h2 class="label">${esc(dayName(m.day, m.today, "long").toUpperCase())}` +
-    `</h2><span class="small">${meetings ? `${meetings} on your calendar` : "Nothing on your calendar"}</span></div>` +
-    `<div class="stack">${rows.map((r) => rowHtml(m, r)).join("")}</div></section>`;
+    `</h2><span class="small">${meetings ? `${meetings} on your calendar` : "Nothing on your calendar"}` +
+    `${due ? ` · ${due} due` : ""}</span></div><div class="stack">${rows.map((r) => rowHtml(m, r)).join("")}</div></section>`;
 }
 
 /** A moment as its time today, or with its date on another day. */
@@ -99,17 +112,40 @@ function problems(m: AgendaModel): string {
   return lines.join("") + cut;
 }
 
+const steps = (items: readonly string[]): string => `<ol class="steps">${items.map((s) => `<li>${s}</li>`).join("")}</ol>`;
+
+/** Where each service keeps a calendar's private address, step by step. Fixed words only: nothing here comes from outside. */
+export function addressSteps(): string {
+  return `<h3 class="label group-title">GOOGLE CALENDAR</h3>` + steps([
+    "On a computer, open <b>calendar.google.com</b>.",
+    "Click the gear at the top, then <b>Settings</b>.",
+    "Under <b>Settings for my calendars</b>, click the calendar.",
+    "Click <b>Integrate calendar</b>.",
+    "Copy <b>Secret address in iCal format</b> and paste it here.",
+  ]) + `<p class="small">On a phone, open the same page in the browser and turn on <b>Desktop site</b> in its menu, then ` +
+    `follow the same steps.</p><p class="small">A work or school account may show no secret address: its admin's ` +
+    `sharing setting hides it. The admin can change it in the <b>Admin console</b>: Apps, Google Workspace, Calendar, ` +
+    `Sharing settings, <b>External sharing options for primary calendars</b>, then one of the <b>Share all ` +
+    `information</b> options.</p>` +
+    `<h3 class="label group-title">ICLOUD</h3>` + steps([
+      "In Calendar, share the calendar as a <b>Public Calendar</b>.",
+      "Copy its link and paste it here.",
+    ]) +
+    `<h3 class="label group-title">OUTLOOK</h3>` + steps([
+      "In Outlook on the web, open <b>Settings</b>, then <b>Calendar</b>, then <b>Shared calendars</b>.",
+      "Under <b>Publish a calendar</b>, choose the calendar and publish it.",
+      "Copy the <b>ICS</b> link and paste it here.",
+    ]) +
+    `<p class="small">The address works like a password. It is kept on this ${deviceWord()} only and is never shown ` +
+    `here in full.</p>`;
+}
+
 export function addCalendarForm(busy: boolean): string {
   return `<form class="stack" data-form="calendar-add" autocomplete="off"><label class="small" for="calendar-address">` +
     `Secret address in iCal format</label><input id="calendar-address" class="field" name="ical-url" type="url" ` +
     `inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="2048" required ` +
     `placeholder="https://calendar.google.com/…/basic.ics"><div class="row-buttons"><button type="submit" ` +
-    `class="pill solid"${busy ? " disabled" : ""}>Add calendar</button></div></form>` +
-    `<details class="small"><summary>Where to find it</summary><p class="small">Google Calendar, on a computer: ` +
-    `Settings, then your calendar on the left, then Integrate calendar, then "Secret address in iCal format". A ` +
-    `work account only shows it if its admin allows. iCloud: share the calendar as a public calendar and copy its ` +
-    `link. Outlook: Settings, Calendar, Shared calendars, Publish a calendar, then the ICS link.</p><p class="small">` +
-    `The address works like a password. It is kept on this ${deviceWord()} only and is never shown here in full.</p></details>`;
+    `class="pill solid"${busy ? " disabled" : ""}>Add calendar</button></div></form>`;
 }
 
 export function agendaView(m: AgendaModel, header: string, notice: string, chrome: string): string {
@@ -117,7 +153,7 @@ export function agendaView(m: AgendaModel, header: string, notice: string, chrom
     return `<main class="screen single">${header}${notice}<section class="card"><h2 class="label">CONNECT A CALENDAR` +
       `</h2><p class="text">Agenda shows your meetings with the prayer times between them, for today and the seven days ` +
       `after. It reads your calendar's private address on this ${deviceWord()}; nothing is sent anywhere else.</p>` +
-      `${addCalendarForm(m.busy)}</section></main>${chrome}`;
+      `${addressSteps()}${addCalendarForm(m.busy)}</section></main>${chrome}`;
   }
   return `<main class="screen single">${header}${notice}${weekStrip(m)}${dayCard(m)}<section class="card">` +
     `<div class="split"><p class="small">${esc(readLine(m))}</p><button type="button" class="ghost-link" ` +
@@ -133,15 +169,20 @@ export function calendarsCard(m: AgendaModel): string {
       `${esc(maskAddress(c.url))}</span></span><button type="button" class="ghost-link" data-action="calendar-remove" ` +
       `data-value="${esc(c.id)}"${m.busy ? " disabled" : ""}>${armed ? "Tap again to remove" : "Remove"}</button></div>`;
   }).join("");
+  // The help has an id, so a redraw while it is being read leaves it open (ui/keep.ts).
   return `<section class="card"><h2 class="label">CALENDARS</h2>${rows ? `<div class="stack">${rows}</div>` : ""}` +
-    `${m.calendars.length < CALENDARS_MAX ? addCalendarForm(m.busy)
+    `${m.calendars.length < CALENDARS_MAX ? `${addCalendarForm(m.busy)}<details id="calendar-help" class="small">` +
+      `<summary>Where to find it</summary><div class="stack">${addressSteps()}</div></details>`
       : `<p class="small">${CALENDARS_MAX} calendars is the most Agenda reads.</p>`}` +
     `</section>`;
 }
 
-/** Home: the meeting on now or next, when there are calendars. */
+/** Home: the meeting on now or next, when there are calendars; until one is connected, one quiet line into Agenda. */
 export function homeAgendaCard(m: AgendaModel): string {
-  if (m.calendars.length === 0) return "";
+  if (m.calendars.length === 0) {
+    return `<button type="button" class="card link slim" data-go="agenda"><span class="label">AGENDA</span>` +
+      `<span class="small">· Connect your calendar</span></button>`;
+  }
   const up = nextUp(m.agenda, m.now);
   if (!up) {
     return `<button type="button" class="card link" data-go="agenda"><span class="col"><span class="label">AGENDA</span>` +
