@@ -1,0 +1,467 @@
+/*
+ * Awqat: one painted place behind glass. A serif for what matters (the greeting, the next prayer, the page you are
+ * on), the phone's own sans for everything else, hairlines instead of boxes, and one warm accent kept for Friday.
+ * Nothing moves without a reason; reduced motion turns movement off.
+ */
+@font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerif-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerif-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+
+:root {
+  --ink: #f5f1e8;
+  --soft: rgba(245, 241, 232, 0.8);
+  --muted: rgba(245, 241, 232, 0.68);
+  --accent: #e2cc9a;
+  --ground: #121219;
+  --glass: rgba(13, 13, 19, 0.42);
+  --glass-deep: rgba(14, 14, 20, 0.62);
+  --hair: rgba(255, 255, 255, 0.1);
+  --hair-strong: rgba(255, 255, 255, 0.18);
+  --blur: blur(28px) saturate(150%);
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --sans: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* A soft spring for things that arrive (a sheet rising), as a CSS curve: no runtime. */
+  --spring: linear(0, 0.22 6%, 0.63 16%, 0.9 27%, 1.01 39%, 1.03 50%, 1.01 66%, 1);
+  --top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  /* An iPhone on its side: the notch and the rounded corners take the left or right edge. */
+  --left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* Text keeps its size when an iPhone turns on its side. */
+html { background: var(--ground); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { margin: 0; min-height: 100%; color: var(--ink); }
+body { font: 500 16px/1.45 var(--sans); -webkit-font-smoothing: antialiased; overscroll-behavior-y: none;
+  font-feature-settings: "tnum" 1; }
+h1, h2, p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* The sky: two layers, the new one fades in over the old from wherever the fade has got to. */
+.sky { position: fixed; inset: 0; z-index: -2; background: var(--ground) center / cover no-repeat; opacity: 0;
+  transition: opacity 1.4s ease; }
+.sky.on { opacity: 1; }
+.shade { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(8,8,14,0.38) 0%, rgba(8,8,14,0.18) 36%, rgba(8,8,14,0.58) 100%); }
+html[data-sky="fajr"] .shade, html[data-sky="isha"] .shade { background: linear-gradient(180deg, rgba(8,8,14,0.22), rgba(8,8,14,0.46)); }
+/* The bright daytime skies need more shade for ivory text on the open sky to stay readable. */
+html[data-sky="morning"] .shade, html[data-sky="dhuhr"] .shade, html[data-sky="asr"] .shade {
+  background: linear-gradient(180deg, rgba(8,8,14,0.52) 0%, rgba(8,8,14,0.42) 45%, rgba(8,8,14,0.6) 100%); }
+
+.screen { max-width: 30rem; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
+  padding: calc(var(--top) + 64px) calc(var(--right) + 20px) calc(var(--bottom) + 124px) calc(var(--left) + 20px); }
+
+/* Type */
+.display { font-family: var(--serif); font-weight: 400; font-size: 46px; line-height: 1.02; letter-spacing: -0.012em; }
+.numeral { font-family: var(--serif); font-weight: 400; font-size: 36px; line-height: 1.05; letter-spacing: -0.01em; }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; color: var(--soft); }
+.label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+.label.accent { color: var(--accent); }
+.mono { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; }
+.big { font-family: var(--serif); font-weight: 400; font-size: 36px; line-height: 1.05; }
+.soft { font-weight: inherit; color: var(--soft); }
+.small { font-size: 13px; font-weight: 500; color: var(--soft); }
+.muted { font-size: 15px; font-weight: 500; color: var(--muted); }
+.text { font-size: 16px; font-weight: 500; line-height: 1.5; }
+.center { text-align: center; }
+
+.hello { display: flex; flex-direction: column; gap: 10px; padding: 0 4px 12px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.42), 0 8px 30px rgba(0,0,0,0.35); }
+.head { display: flex; align-items: center; gap: 14px; padding-bottom: 4px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.42), 0 8px 30px rgba(0,0,0,0.35); }
+.head h1 { font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1.02; letter-spacing: -0.01em; }
+.sub { font-size: 13.5px; font-weight: 500; color: var(--soft); }
+.head .sub { margin-top: 8px; }
+
+/* Glass */
+.card { display: flex; flex-direction: column; gap: 10px; padding: 20px 22px; border-radius: 28px; text-align: left;
+  background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--hair);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 22px 44px -28px rgba(0,0,0,0.6); }
+.card.link { width: 100%; cursor: pointer; transition: transform 180ms var(--ease), border-color 180ms ease; }
+.card.link:active { transform: scale(0.988); border-color: var(--hair-strong); }
+.card.next { flex-direction: row; justify-content: space-between; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 4px; }
+.col.end { align-items: flex-end; }
+.foot { align-self: center; font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em; color: var(--soft);
+  text-align: center; padding: 8px 14px; border-radius: 999px; background: rgba(13,13,19,0.36);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.notice { font-size: 14px; font-weight: 500; padding: 14px 18px; border-radius: 20px; background: var(--glass-deep);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid var(--hair); }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+button:disabled { opacity: 0.5; cursor: default; transform: none; }
+.split { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+.dots { display: flex; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 999px; border: 1.25px solid rgba(245,241,232,0.7); }
+.dot.on { background: var(--ink); border-color: var(--ink); }
+.dot.late { background: rgba(245,241,232,0.42); border-color: transparent; }
+
+.round { width: 44px; height: 44px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center;
+  justify-content: center; padding: 0; cursor: pointer; background: var(--glass); backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px); border: 1px solid var(--hair); transition: transform 160ms var(--ease); }
+.round:active { transform: scale(0.94); }
+.corner { position: fixed; top: calc(var(--top) + 10px); right: calc(var(--right) + 16px); z-index: 3; }
+.small-round { width: 44px; height: 44px; }
+
+.orb { position: fixed; left: 50%; bottom: calc(var(--bottom) + 24px); z-index: 3; width: 64px; height: 64px;
+  margin-left: -32px; border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0;
+  cursor: pointer; background: rgba(13,13,19,0.5); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--hair-strong); box-shadow: 0 18px 40px rgba(0,0,0,0.38); transition: transform 180ms var(--ease); }
+.orb:active { transform: scale(0.94); }
+/* Where something is counted the middle of the screen is the thumb's: the orb never sits on a ring. */
+main:has(.counter) ~ .orb { left: auto; right: calc(var(--right) + 16px); margin-left: 0; }
+
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-top: 4px; }
+.chip, .pill { min-height: 44px; padding: 0 18px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600;
+  letter-spacing: 0.01em; background: rgba(255,255,255,0.04); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--hair-strong); transition: transform 160ms var(--ease), background-color 180ms ease; }
+.chip:active, .pill:active { transform: scale(0.96); }
+.pill.solid { background: var(--ink); color: #141419; border-color: var(--ink); }
+.pill.solid .soft { color: rgba(20,20,25,0.62); }
+.note-row { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; background: none; text-align: left; cursor: pointer; }
+.row-buttons { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+/* Settings' typed place and the five iqama fields: inputs side by side that wrap on a narrow phone. */
+.row-form { display: grid; gap: 8px; padding-top: 12px; }
+.row-form .row-buttons .field { flex: 1 1 120px; min-width: 0; }
+/* One prayer to a row, as the reminders' switches are: the name, then its minutes in a short box. */
+.iqama-row { display: grid; gap: 4px; min-width: 0; margin: 12px 0 0; padding: 0; border: 0; }
+.iqama-row legend { padding: 0; margin-bottom: 4px; }
+.iqama-field { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; font-weight: 600; }
+.iqama-field .field { width: 84px; flex: 0 0 84px; margin-top: 0; padding: 0 8px; text-align: center;
+  -moz-appearance: textfield; appearance: textfield; }
+.iqama-field .field::-webkit-inner-spin-button, .iqama-field .field::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* The quiet row of areas still to come: words, not buttons in boxes. */
+.quiet-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 2px; padding-top: 8px; }
+.quiet { min-height: 44px; padding: 0 9px; border: 0; background: none; cursor: pointer; color: var(--soft);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.45); }
+
+/* Prayers */
+.prayer { display: flex; align-items: center; gap: 14px; min-height: 50px; width: 100%; padding: 0; border: 0;
+  background: none; cursor: pointer; text-align: left; }
+.mark { width: 26px; height: 26px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center;
+  justify-content: center; border: 1.25px solid rgba(245,241,232,0.7); color: #141419; transition: background-color 180ms ease; }
+.mark.on { background: var(--ink); border-color: var(--ink); }
+.mark.late { background: rgba(245,241,232,0.5); border-color: transparent; }
+.name { font-size: 17px; font-weight: 600; min-width: 84px; }
+.time { font-size: 15px; font-weight: 500; color: var(--soft); font-variant-numeric: tabular-nums; }
+.time .iqama { display: block; font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em; color: var(--muted); }
+.note { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--muted); }
+.sunnah { display: flex; align-items: center; gap: 8px; padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--hair); }
+
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; flex: 1; }
+.day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.day .dot { width: 7px; height: 7px; }
+.owed { display: flex; align-items: center; gap: 8px; }
+.count { min-width: 28px; text-align: center; font-family: var(--serif); font-size: 26px; }
+
+/* Friday: the one place the warm accent appears. A mode open now is the first thing on Home. */
+.card.mode-now.mode-jumuah { border-color: rgba(226,204,154,0.3);
+  background: linear-gradient(180deg, rgba(226,204,154,0.1), rgba(13,13,19,0.44) 46%); }
+.mode-now .display { font-size: 34px; text-wrap: balance; }
+.mode-now .label.accent, .mode-screen .label.accent { color: var(--muted); }
+.mode-now.mode-jumuah .label.accent { color: var(--accent); }
+.mode-now .row-buttons { align-items: center; }
+.mode-also { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+.mode-also .ghost-link { color: var(--ink); border-color: var(--hair-strong); }
+.mode-row { display: flex; width: 100%; min-height: 56px; padding: 10px 0; align-items: center; gap: 12px; text-align: start;
+  background: none; border: 0; border-top: 1px solid var(--hair); color: inherit; cursor: pointer; }
+li:first-child > .mode-row { border-top: 0; }
+.mode-row:active { opacity: 0.7; }
+.mode-group { padding: 14px 4px 0; }
+/* .plain, further down, zeroes a list's padding: this list is also the card, so it says its own. */
+.mode-screen .checks.card { padding: 6px 22px; }
+.mode-screen .checks.card > .check-row:first-child { border-top: 0; }
+.mode-screen .check-row { gap: 12px; }
+.mode-screen .check { padding: 12px 0; min-width: 0; }
+.mode-screen .check-row .pill { flex-shrink: 0; }
+/* To one side, so the orb in the middle of the screen never sits on its words. */
+.mode-add { align-self: flex-start; justify-self: start; }
+.mode-screen .source { display: block; }
+.money-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 12px 0;
+  border-top: 1px solid var(--hair); }
+.money-row:first-child { border-top: 0; }
+.money-row .col { min-width: 0; overflow-wrap: anywhere; }
+/* A reply keeps its own line breaks. */
+.mail-draft { flex-basis: 100%; }
+.mail-draft-text { white-space: pre-line; margin-top: 8px; }
+.money-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.money-earlier { padding-top: 10px; }
+.money-older > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+.lift-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.lift-field { display: flex; flex-direction: column; min-width: 0; }
+.lift-field:first-child, .lift-form .pill { grid-column: 1 / -1; }
+.plan-card > summary { cursor: pointer; min-height: 24px; }
+.plan-card[open] > summary { padding-bottom: 8px; }
+.dua-field { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 18px; line-height: 1.9; }
+.checks { gap: 0; }
+.check-row { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--hair); }
+.check-row:first-child { border-top: 0; }
+.check { flex: 1; display: flex; align-items: center; gap: 14px; min-height: 54px; padding: 6px 0; border: 0;
+  background: none; text-align: left; cursor: pointer; }
+.tick { width: 24px; height: 24px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center;
+  justify-content: center; border: 1.25px solid rgba(226,204,154,0.7); color: #141419;
+  transition: background-color 180ms ease, border-color 180ms ease; }
+.tick.on { background: var(--accent); border-color: var(--accent); }
+.check-name { font-size: 16px; font-weight: 600; }
+.source { font-size: 11.5px; font-weight: 500; color: var(--muted); }
+.ghost-link { min-height: 40px; padding: 0 14px; flex-shrink: 0; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(226,204,154,0.45); background: none; color: var(--accent); font-size: 13px; font-weight: 600; }
+
+/* Adhkar: the Arabic large and calm, ivory ticks (the warm accent stays Friday's), and nothing that moves on its own,
+   so a finger counting fast stays on its dhikr. A press gives under the finger and springs back from wherever it is. */
+.adhkar-title { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 28px; line-height: 1.5; color: var(--ink); }
+.adhkar-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 58px; padding: 6px 0; border: 0;
+  border-top: 1px solid var(--hair); background: none; text-align: left; cursor: pointer; }
+.adhkar-row:first-child { border-top: 0; }
+.adhkar-row .tick, .dhikr .tick { border-color: var(--hair-strong); }
+.adhkar-row .tick.on { background: var(--ink); border-color: var(--ink); }
+.adhkar-row-ar { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 18px; color: var(--soft); }
+.dhikr-list { gap: 14px; }
+.dhikr { gap: 12px; transition: border-color 180ms ease; }
+.dhikr-tap { display: flex; flex-direction: column; gap: 12px; width: 100%; padding: 0; border: 0; background: none;
+  text-align: left; cursor: pointer; transition: transform 160ms var(--ease); }
+.dhikr-tap:active { transform: scale(0.988); }
+/* A said (or not yet open) dhikr keeps its look and its focus: the card shows done, and a press no longer gives. */
+.dhikr-tap[aria-disabled="true"] { cursor: default; }
+.dhikr-tap[aria-disabled="true"]:active { transform: none; }
+.dhikr-name { font-size: 15px; font-weight: 600; }
+.dhikr-ar { display: block; font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 21px; line-height: 2.05;
+  text-align: right; color: var(--ink); }
+/* The user's own page, as the picture it is, on white like the scan, so it reads the same on any sky. */
+.dhikr-page { display: block; width: 100%; max-width: 36rem; height: auto; margin-inline: auto; padding: 10px 8px; border-radius: 12px;
+  background: #fff; }
+.dhikr.done .dhikr-page { opacity: 0.55; }
+.dhikr-quran { display: block; font-size: 14px; font-weight: 500; color: var(--soft); }
+.dhikr-times { display: block; font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 14px; color: var(--muted);
+  text-align: right; }
+.dhikr-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding-top: 4px; }
+.dhikr-remove { display: flex; justify-content: flex-end; }
+.counter-slot { display: flex; min-width: 0; }
+.counter-slot:first-child { justify-content: flex-start; }
+.counter-slot:last-child { justify-content: flex-end; }
+.counter-side { padding: 0 10px; font-size: 12.5px; }
+/*
+ * The tap counter: one big ring for the thumb. It gives quickly under the press and springs back from wherever it has
+ * got to; the ring's own transition retargets from where it is on screen, so fast taps never make it jump.
+ */
+.counter { position: relative; width: 116px; height: 116px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,0.05); touch-action: manipulation; -webkit-tap-highlight-color: transparent; color: var(--ink);
+  transition: transform 460ms linear(0, 0.33 8%, 0.66 16%, 0.92 26%, 1.06 36%, 1.09 44%, 1.06 56%, 1.01 72%, 1), background-color 300ms ease; }
+.counter:active { transform: scale(0.93); transition: transform 90ms ease-out, background-color 300ms ease; }
+.counter[aria-disabled="true"] { cursor: default; }
+.counter[aria-disabled="true"]:active { transform: none; }
+.counter.done { background: rgba(245,241,232,0.13); }
+.counter-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+.counter-track, .counter-arc { fill: none; stroke-width: 5; }
+.counter-track { stroke: var(--hair-strong); }
+.counter-arc { stroke: var(--ink); stroke-linecap: round; stroke-dasharray: 100 200; transition: stroke-dashoffset 420ms cubic-bezier(0.22, 1, 0.36, 1); }
+.counter-ripple { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--ink); opacity: 0; pointer-events: none; }
+.counter-inside { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; pointer-events: none; }
+.counter-num { font-family: var(--serif); font-size: 38px; line-height: 1; font-variant-numeric: tabular-nums; }
+.counter-check { display: flex; }
+.counter-of { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.dhikr-quran-name { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 28px; line-height: 1.1; }
+.dhikr-before { display: flex; flex-direction: column; gap: 2px; }
+.dhikr-before-ar { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 16px; line-height: 1.8; color: var(--soft); text-align: right; }
+.dhikr-read { min-height: 48px; }
+.dhikr-wait { text-align: center; }
+.dhikr .ghost-link { min-height: 44px; color: var(--ink); border-color: var(--hair-strong); }
+.dhikr.done { border-color: rgba(245,241,232,0.3); }
+.dhikr.done .dhikr-ar, .dhikr.done .dhikr-name { color: var(--muted); }
+.dhikr-source summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-size: 12px;
+  font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
+.dhikr-source .source { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 13px; line-height: 1.9;
+  text-align: right; }
+
+/* Fields */
+.field { width: 100%; min-height: 48px; margin-top: 6px; padding: 0 16px; border-radius: 16px; font-size: 16px;
+  background: rgba(8,8,14,0.42); border: 1px solid var(--hair-strong); outline: none; transition: border-color 160ms ease; }
+.field:focus { border-color: rgba(245,241,232,0.7); }
+.toggle { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; font-weight: 600; }
+/* Switches: a transition, so a quick second tap turns the knob back from wherever it has got to. */
+.toggle input { -webkit-appearance: none; appearance: none; position: relative; flex-shrink: 0; width: 48px; height: 30px;
+  margin: 0; border-radius: 999px; cursor: pointer; background: rgba(255,255,255,0.12); border: 1px solid var(--hair-strong);
+  transition: background-color 220ms ease, border-color 220ms ease; }
+.toggle input::before { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 999px;
+  background: var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,0.35); transition: transform 260ms var(--ease), background-color 220ms ease; }
+.toggle input:checked { background: var(--ink); border-color: var(--ink); }
+.toggle input:checked::before { transform: translateX(18px); background: #141419; }
+
+/* Sheets rise with a soft spring and sit on a quiet scrim. */
+.sheet { position: fixed; inset: 0; z-index: 10; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(8, 8, 14, 0.52); }
+.sheet-inner { position: relative; width: 100%; max-width: 30rem; display: flex; flex-direction: column; align-items: center;
+  gap: 16px; padding: 34px calc(var(--right) + 22px) calc(var(--bottom) + 28px) calc(var(--left) + 22px);
+  border-radius: 30px 30px 0 0; background: rgba(17,17,24,0.96);
+  max-height: 92vh; overflow-y: auto; backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--hair); border-bottom: 0; animation: rise 460ms var(--spring); }
+.sheet-inner::before { content: ""; position: absolute; top: 10px; left: 50%; width: 38px; height: 4px; margin-left: -19px;
+  border-radius: 999px; background: rgba(255,255,255,0.22); }
+@keyframes rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+/* Talk: the speaking orb is a canvas drawn each frame by voiceOrb.ts (the user's voice ripples it in --ink, the assistant's
+   blooms it in --accent); its dimming and motion are springs there, so nothing here animates. */
+.talk-orb { position: relative; display: flex; align-items: center; justify-content: center; }
+.voice-orb { display: block; width: min(200px, 52vw); height: min(200px, 52vw); color: var(--ink);
+  pointer-events: none; }
+.talk-caption { min-height: 1.4em; max-width: 26rem; color: var(--muted); }
+.talk-signin { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+.talk-logged { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 8px 12px;
+  border: 1px solid var(--hair); border-radius: 16px; }
+.talk-logged[hidden] { display: none; }
+.talk-mute { min-width: 48px; display: inline-flex; align-items: center; justify-content: center; }
+.talk-mute[aria-pressed="true"] { background: rgba(255,255,255,0.14); }
+
+/* Bars: their widths and heights are set from data-w / data-h by script (the policy allows no inline styles). */
+.bar { display: block; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; }
+.bar.thin { height: 2px; margin-top: 4px; }
+.fill { display: block; height: 100%; width: 0; background: var(--ink); border-radius: inherit; transition: width 360ms var(--ease); }
+.bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; padding-top: 4px; }
+.bar-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.vbar { width: 100%; height: 56px; border-radius: 10px; background: rgba(255,255,255,0.08); display: flex; align-items: flex-end; overflow: hidden; }
+.vfill { width: 100%; height: 0; background: var(--ink); border-radius: 10px; }
+
+.chips.start { justify-content: flex-start; }
+.chip.on { background: var(--ink); color: #141419; border-color: var(--ink); }
+.chip.on .soft { color: rgba(20,20,25,0.7); }
+.inline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.grow { flex: 1 1 auto; min-width: 0; }
+.wide { width: 100%; }
+.small-field { width: 96px; margin-top: 0; }
+.field.area { min-height: 120px; padding: 12px 16px; line-height: 1.5; resize: vertical; }
+.link-button { align-self: flex-start; min-height: 44px; padding: 0 2px; border: 0; background: none; cursor: pointer;
+  font-size: 14px; font-weight: 600; color: var(--soft); text-decoration: underline; text-decoration-thickness: 1px;
+  text-underline-offset: 4px; }
+.pill.danger { background: #f2b8b5; color: #141419; border-color: #f2b8b5; }
+.link-button.armed { color: #f2b8b5; }
+details.more { display: flex; flex-direction: column; gap: 8px; }
+details.more > summary { list-style: none; display: flex; align-items: center; }
+details.more > summary::-webkit-details-marker { display: none; }
+input[type="search"]::-webkit-search-cancel-button { display: none; }
+.search-row { flex-wrap: nowrap; }
+.search-row .field { flex: 1 1 auto; width: auto; min-width: 0; margin-top: 0; }
+.search-row .pill { flex-shrink: 0; }
+.file-pill { display: flex; align-items: center; justify-content: center; text-align: center; }
+.file-pill:focus-within { outline: 2px solid var(--ink); outline-offset: 3px; }
+.plain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.row-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px;
+  padding: 6px 0; border-top: 1px solid var(--hair); font-size: 15px; font-weight: 500; }
+.row-item:first-child { border-top: 0; }
+.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45;
+  color: var(--soft); align-self: stretch; }
+
+/* Juz grid: brighter means revised more recently. */
+.juz-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.juz { min-height: 44px; border-radius: 14px; cursor: pointer; font: 600 15px/1 var(--sans);
+  color: var(--ink); background: transparent; border: 1px solid var(--hair-strong); transition: background-color 180ms ease; }
+.juz.older { background: rgba(245,241,232,0.14); }
+.juz.week { background: rgba(245,241,232,0.66); color: #141419; }
+.juz.today { background: var(--ink); color: #141419; border-color: var(--ink); }
+
+/* Muraja'ah: ivory ticks (the warm accent stays Friday's), weak pages under each juz, and the plan sheet's choices. */
+.plan-item { border-top: 1px solid var(--hair); }
+.plan-item:first-child { border-top: 0; }
+.plan-item .check-row { border-top: 0; }
+.plan .tick { border-color: var(--hair-strong); }
+.plan .tick.on { background: var(--ink); border-color: var(--ink); }
+.plan .ghost-link { color: var(--ink); border-color: var(--hair-strong); }
+.chips.weak { padding: 0 0 10px 38px; }
+.small-chip { min-height: 40px; padding: 0 12px; font-size: 13px; }
+.link-inline { padding: 0; border: 0; background: none; color: var(--ink); font: inherit; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px; }
+.inline .link-inline { min-height: 44px; padding: 0 8px; }
+fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+legend { padding: 0 0 8px; }
+.pick { position: relative; display: flex; align-items: center; justify-content: center; }
+.pick input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.juz.pick:has(input:checked), .chip.pick:has(input:checked) { background: var(--ink); color: #141419; border-color: var(--ink); }
+.pick:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+/* A command to type on the Mac, kept on one line. */
+.card code { white-space: nowrap; font-size: 0.86em; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.08); }
+
+/* Books */
+.cover { flex-shrink: 0; border-radius: 6px; object-fit: cover; background: rgba(255,255,255,0.08);
+  box-shadow: 0 10px 24px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06); }
+.cover.s { width: 44px; height: 66px; }
+.cover.m { width: 120px; height: 180px; }
+.cover.l { width: 104px; height: 156px; }
+.cover.blank { display: flex; align-items: center; justify-content: center; font: 400 24px/1 var(--serif);
+  border: 1px solid var(--hair-strong); }
+.book-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 76px; padding: 6px 0; border: 0;
+  background: none; text-align: left; cursor: pointer; border-top: 1px solid var(--hair); }
+.book-row:first-of-type { border-top: 0; }
+.title { font-size: 16px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.card.reading { flex-direction: row; align-items: center; gap: 16px; }
+.book-head { flex-direction: row; align-items: flex-start; gap: 16px; }
+.book-title { font-family: var(--serif); font-size: 28px; line-height: 1.08; font-weight: 400; overflow-wrap: anywhere; }
+.sheet-title { font-family: var(--serif); font-size: 30px; font-weight: 400; }
+
+/* Agenda: a day's meetings with the prayers between them; what has passed steps back. */
+.event-row .col.end { align-items: flex-end; flex-shrink: 0; }
+.prayer-row { min-height: 36px; }
+.prayer-row .label { color: var(--soft); }
+.row-item.past { opacity: 0.5; }
+.event-row.now .title::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 8px 2px 0;
+  border-radius: 50%; background: var(--ink); vertical-align: middle; }
+.row-buttons.center { justify-content: center; }
+details.small summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--soft); }
+
+/* Body: thirty days of weight as thin bars, the lightest day lowest. */
+.spark { display: flex; align-items: flex-end; gap: 3px; height: 44px; }
+.spark-bar { flex: 1; height: 100%; display: flex; align-items: flex-end; border-radius: 4px; overflow: hidden;
+  background: rgba(255,255,255,0.06); }
+.spark-bar .vfill { border-radius: 4px; min-height: 3px; }
+
+/* Learn: a track's week opens its screen; status chips go to do, doing (brighter), done (ivory); lessons keep their
+   lines. A press gives under the finger and springs back from wherever it is. */
+.track-open { display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 0; border: 0; background: none;
+  text-align: left; cursor: pointer; transition: transform 160ms var(--ease); }
+.track-open:active { transform: scale(0.988); }
+.item-row { align-items: flex-start; justify-content: flex-start; }
+.status-chip { flex-shrink: 0; min-width: 78px; padding: 0 12px; font-size: 13px; }
+.status-chip.doing { background: rgba(255,255,255,0.16); border-color: rgba(245,241,232,0.55); }
+.item-row.done .title { color: var(--muted); }
+.lesson-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.row-item > .link-inline { flex-shrink: 0; min-height: 44px; padding: 0 8px; }
+.link-inline.armed { color: #f2b8b5; }
+.review-prompt { font-family: var(--serif); font-size: 30px; line-height: 1.1; font-weight: 400; overflow-wrap: anywhere; }
+
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+/*
+ * A big screen (a tablet, an open foldable, a phone on its side): the cards sit two to a row, in reading order, with the
+ * greeting, notices and the quiet row across both. A long list (the library) keeps one wider column.
+ *
+ * A grid, not CSS columns: in columns WebKit on iPadOS kept a glass card's place at the head of the second column but
+ * painted it, blank, at the foot of the first, over whatever came next. A grid has no fragments for it to misplace.
+ */
+@media (min-width: 820px) {
+  .screen { max-width: 60rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px;
+    align-items: start; align-content: start;
+    padding: calc(var(--top) + 72px) calc(var(--right) + 36px) calc(var(--bottom) + 132px) calc(var(--left) + 36px); }
+  .screen > * { margin: 0; min-width: 0; }
+  .screen > :is(.hello, .head, .notice, .quiet-row, .foot, .chips, details, .span) { grid-column: 1 / -1; }
+  .screen > .foot { width: fit-content; justify-self: center; }
+  .screen > .link-button { display: block; }
+  .screen.single { max-width: 40rem; grid-template-columns: minmax(0, 1fr); }
+  .display { font-size: 56px; }
+}
+
+/* On a big screen a sheet is a panel in the middle, not a drawer from the bottom edge. */
+@media (min-width: 820px) and (min-height: 600px) {
+  .sheet { align-items: center; padding: 24px; }
+  .sheet-inner { max-width: 34rem; max-height: 86vh; padding: 30px 26px 26px; border-radius: 30px;
+    border-bottom: 1px solid var(--hair); animation-name: settle; }
+  .sheet-inner::before { display: none; }
+}
+@keyframes settle { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}

@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Awqat</string>
+    <string name="title_activity_main">Awqat</string>
+    <string name="package_name">app.awqat</string>
+    <string name="custom_url_scheme">app.awqat</string>
+    <string name="widget_today_label">AWQAT</string>
+    <string name="widget_today_description">The next prayer, your Quran page and today\'s revision</string>
+    <string name="widget_next_prayer">NEXT PRAYER</string>
+    <string name="widget_open_app">Open the app</string>
+    <string name="widget_open_hint">Open Awqat once to fill this in</string>
+    <string name="dhikr_widget_label">Dhikr counter</string>
+    <string name="dhikr_widget_description">Count the dhikr that is open now, with the app closed</string>
+    <string name="dhikr_nothing">Nothing to count now</string>
+    <string name="live_add_one">+1</string>
+    <string name="live_channel_name">Live</string>
+    <string name="live_channel_description">The iqama countdown, a dhikr you are counting, a timer you started. Silent.</string>
+</resources>

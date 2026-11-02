@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and later ignore android:allowBackup="false" for a device-to-device transfer, so the two folders that
+     hold secrets are named here: the Talk session (voice/) and the calendars' private addresses (agenda/). A new phone
+     asks for the passphrase and the calendar addresses again rather than receive them. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="voice/" />
+        <exclude domain="file" path="agenda/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="voice/" />
+        <exclude domain="file" path="agenda/" />
+    </device-transfer>
+</data-extraction-rules>

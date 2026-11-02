@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CAPACITOR_DEBUG</key>
+	<string>$(CAPACITOR_DEBUG)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Awqat</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- Taps on a widget or Live Activity come back as awqat://go/<screen>. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.awqat</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>awqat</string>
+			</array>
+		</dict>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>To scan a book's barcode and photograph its cover. The photo stays on this device.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Body shows your weight, steps, sleep and workouts from Apple Health. They are only read; today's step count is kept for the widget on this device, and they leave it only if you turn on Health in talks.</string>
+	<!-- The health plugin carries code that can ask to write; the app never does, so the text says so. -->
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Awqat never writes to Apple Health. Weights you type stay inside the app.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Talk, if you set it up, sends your voice to ElevenLabs while a talk is on. The microphone is used only then.</string>
+	<!-- The location and camera plugins carry code for "always" location and for saving to the photo library, which
+	     the app never calls; Apple refuses a build whose code can ask without a text, so both say what really happens. -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Awqat uses a rough position (about 1 km) only while it is open, to work out prayer times. It never tracks you in the background.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>To work out prayer times where you are. Only a rough position (about 1 km) is used. It stays on this device, unless you use Talk: then it is sent to Open-Meteo for the weather.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Awqat never saves photos to your library. Book cover photos stay inside the app.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>To choose a photo of a book's cover. Only the photo you pick is used, and it stays on this device.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>

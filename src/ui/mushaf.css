@@ -1,0 +1,135 @@
+/*
+ * The mushaf reader: the page fills the screen, as paper (warm ink on cream) or night (ivory on deep ink). The sky and
+ * the orb step away. Pages turn by the browser's own scroll snapping, right to left. The top and bottom bars are laid
+ * over the page (the page is fitted to the whole screen): a tap on the page shows or hides them, and a page turning
+ * leaves them as they are. While they are up, each page's lines are drawn smaller between them (barsZoom.ts).
+ */
+.reader { position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column;
+  padding: var(--top) var(--right) calc(var(--bottom) + 4px) var(--left);
+  /* A held finger on a word picks its ayah; it never starts selecting the glyphs or a callout. */
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.reader.theme-paper { background: #f4eee1; --page-ink: #1d1a15; --page-soft: rgba(29,26,21,0.6); --page-hair: rgba(90,68,30,0.2);
+  --frame: #8f7240; --page-ground: #f4eee1; --bar-ground: rgba(244,238,225,0.96); }
+.reader.theme-night { background: #0e0e13; --page-ink: #ece6d8; --page-soft: rgba(236,230,216,0.6);
+  --page-hair: rgba(255,255,255,0.14); --frame: #c7ad78; --page-ground: #0e0e13; --bar-ground: rgba(14,14,19,0.96); }
+.reader, .reader button { color: var(--page-ink); }
+
+.reader-top, .reader-bottom { position: absolute; left: 0; right: 0; z-index: 2; background: var(--bar-ground);
+  transition: opacity 200ms ease; }
+.reader-top { top: 0; display: flex; align-items: center; gap: 12px;
+  padding: calc(var(--top) + 6px) calc(var(--right) + 16px) 8px calc(var(--left) + 16px);
+  box-shadow: 0 1px 0 var(--page-hair); }
+/*
+ * Hidden, the bars let taps through to the page. A bar reached by keyboard shows again (:focus-visible only: a button
+ * focused by a tap, or by the app after a sheet closes, must not hold a bar up through a page turn).
+ */
+.reader.bars-hidden .reader-top, .reader.bars-hidden .reader-bottom { opacity: 0; pointer-events: none; }
+.reader.bars-hidden .reader-top:has(:focus-visible), .reader.bars-hidden .reader-bottom:has(:focus-visible) {
+  opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .reader-top, .reader-bottom { transition: none; }
+}
+.reader .round { background: transparent; border-color: var(--page-hair); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.reader-title { flex: 1; min-width: 0; min-height: 44px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  text-align: center; padding: 0; border: 0; background: none; cursor: pointer; }
+.sura-ar-small { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 16px; }
+.reader-sura { font-family: var(--serif); font-size: 22px; line-height: 1.1; }
+.reader-sura [lang="ar"] { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 17px; color: var(--page-soft);
+  margin-inline-start: 6px; }
+.reader .small { color: var(--page-soft); }
+
+.pager { flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain; scrollbar-width: none; }
+.pager::-webkit-scrollbar { display: none; }
+.page { position: relative; flex: 0 0 100%; min-width: 100%; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 6px 14px 22px; scroll-snap-align: center; scroll-snap-stop: always; }
+.page-lines { width: 100%; max-width: 36rem; direction: rtl; color: var(--page-ink); transform-origin: 50% 50%;
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+/*
+ * The bars up (or one reached by keyboard): the page's lines drawn smaller between them, as barsZoom.ts worked out.
+ * A transition, so a tap mid-way turns the zoom back from where it is.
+ */
+.reader:not(.bars-hidden) .page-lines, .reader:has(.reader-top :focus-visible) .page-lines,
+.reader:has(.reader-bottom :focus-visible) .page-lines {
+  transform: translateY(var(--bars-shift, 0px)) scale(var(--bars-scale, 1)); }
+/* While the lines are measured to fit the page: at full size, as nothing scaled the words. */
+.reader.fitting .page-lines { transform: none !important; transition: none !important; }
+/* The 1421 print's line spacing (the page fonts' ascent and descent); reader.ts LINE_HEIGHT is the same. */
+.line { display: flex; justify-content: space-between; align-items: center; height: calc(1em * 1.8); white-space: nowrap; }
+.line.short { justify-content: center; gap: 0.16em; }
+.w { flex-shrink: 0; margin: 0; padding: 0 0.02em; border: 0; border-radius: 4px; background: none; font: inherit;
+  line-height: 1; cursor: pointer; transition: background-color 300ms ease-out; }
+.w.noted { box-shadow: inset 0 -1px 0 var(--frame); }
+.w.miss { background: rgba(190,70,70,0.14); box-shadow: inset 0 -2px 0 rgba(190,70,70,0.75); }
+.theme-night .w.miss { background: rgba(240,130,130,0.16); box-shadow: inset 0 -2px 0 rgba(240,130,130,0.8); }
+/*
+ * The ayah being held lights up over the hold (hold.ts); once the hold has taken it is a shade stronger (lifting then
+ * opens it), and it stays so while its sheet is up.
+ */
+.w.held, .w.miss.held { background: rgba(143,114,64,0.16); }
+.w.held.armed, .w.miss.held.armed { background: rgba(143,114,64,0.32); }
+.theme-night .w.held, .theme-night .w.miss.held { background: rgba(226,204,154,0.14); }
+.theme-night .w.held.armed, .theme-night .w.miss.held.armed { background: rgba(226,204,154,0.3); }
+@media (prefers-reduced-motion: reduce) {
+  .page-lines, .w { transition: none; }
+}
+
+.line.surah, .line.bism { justify-content: center; }
+.surah-frame { display: flex; align-items: center; justify-content: center; width: 100%; height: 1.5em;
+  border: 1px solid var(--frame); outline: 1px solid var(--frame); outline-offset: 3px; border-radius: 2px; }
+.surah-ar { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 0.74em; line-height: 1; color: var(--page-ink); }
+.page-lines.opening { padding: 10% 7%; border: 1px solid var(--frame); outline: 1px solid var(--frame); outline-offset: 5px;
+  border-radius: 6px; }
+/* The two opening pages are set centred, word by word, as in print: never stretched to the edges. */
+.page-lines.opening .line { justify-content: center; gap: 0.3em; }
+.page-wait { max-width: 18rem; text-align: center; font-size: 15px; line-height: 1.7; color: var(--page-soft); }
+.page-no { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-family: "Noto Naskh Arabic", serif;
+  font-size: 14px; color: var(--page-soft); }
+/* In the bar over the page: three lines at most, so a long note never covers the page (the note sheet has it all). */
+.page-note-line { padding: 0 28px 4px; text-align: center; font-size: 13px; color: var(--page-soft);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.reader-notice { margin: 0 20px 6px; padding: 8px 14px; border: 1px solid var(--page-hair); border-radius: 14px;
+  text-align: center; font-size: 13px; color: var(--page-ink); }
+/*
+ * Two pages open (a big screen on its side): each page takes half, the odd page on the right, and the pages turn a
+ * spread at a time; a hairline between them is the spine.
+ */
+.pager.spread .page { flex-basis: 50%; min-width: 50%; scroll-snap-align: none; scroll-snap-stop: normal;
+  padding: 6px 22px 22px; }
+.pager.spread .page.spread-start { scroll-snap-align: start; scroll-snap-stop: always; box-shadow: inset 1px 0 0 var(--page-hair); }
+/*
+ * The mushaf as a book (pageTurn.ts): the pages lie stacked, each on its own layer already drawn by the browser, so changing
+ * their order repaints nothing. Each is opaque, so one on top hides the rest. What turns is the leaf on the canvas over them.
+ */
+/* isolate: the pages' order is among themselves, so the bars stay over all of them. */
+.pager.book { position: relative; isolation: isolate; display: block; overflow: hidden; scroll-snap-type: none; touch-action: pinch-zoom; }
+.pager.book > .page { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; min-width: 0; flex: none; background: var(--page-ground);
+  scroll-snap-align: none; scroll-snap-stop: normal; will-change: transform; contain: strict; }
+.pager.book.spread > .page { width: 50%; }
+.pager.book.spread > .page.spread-start { left: 50%; }
+/* While it is measured, this page's lines alone are at full size, so the other pages stay as they are drawn. */
+.pager.book .page-lines.fitting { transform: none !important; transition: none !important; }
+.curl-canvas { position: absolute; inset: 0; z-index: 5; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
+.curl-canvas.on { visibility: visible; }
+.note-pill { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; }
+
+/* The open page takes focus after a turn (for a screen reader); the page itself needs no ring. */
+.page:focus { outline: none; }
+/* The app's ivory focus ring would vanish on the paper page. */
+.reader.theme-paper :focus-visible { outline-color: var(--page-ink); }
+
+.reader-bottom { bottom: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px calc(var(--right) + 16px) calc(var(--bottom) + 10px) calc(var(--left) + 16px);
+  box-shadow: 0 -1px 0 var(--page-hair); }
+.reader-actions { display: flex; align-items: center; gap: 8px; }
+.reader .pill { background: transparent; border-color: var(--page-hair); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.reader .pill.solid { background: var(--page-ink); color: var(--page-ground); border-color: var(--page-ink); }
+.reader .ghost-link { color: var(--frame); border-color: var(--frame); }
+
+/* The tapped ayah, in the sheet. */
+.ayah-text { align-self: stretch; font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 22px; line-height: 2.1;
+  text-align: right; }
+.ayah-text mark { padding: 0 2px; border-radius: 4px; color: inherit; background: rgba(226,204,154,0.28); }
+.center-row { justify-content: center; }
+.sheet-error { align-self: stretch; font-size: 13.5px; line-height: 1.5; color: #f0b4ae; text-align: center; }
+.sheet-error[hidden] { display: none; }

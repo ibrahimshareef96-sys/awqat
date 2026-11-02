@@ -1,0 +1,4 @@
+# For the Python scripts in this folder: the icons and brand (Pillow, fontTools, uharfbuzz).
+pillow==12.3.0
+fonttools==4.63.0
+uharfbuzz==0.56.0

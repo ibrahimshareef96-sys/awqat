@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A build that adds its own adhan recordings (docs/adhan.md) names them only at run time (the notification channels'
+     sounds, src/device.ts), so the release build's resource shrinking would drop them without this. With no
+     recordings in res/raw, these names match nothing and are ignored. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/adhan,@raw/adhan_fajr" />
