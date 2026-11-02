@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 12 and later ignore android:allowBackup="false" for a device-to-device transfer, so the two folders that
      hold secrets are named here: the Talk session (voice/) and the calendars' private addresses (agenda/). A new phone
-     asks for the passphrase and the calendar addresses again rather than receive them. -->
+     asks for the passphrase and the calendar addresses again rather than receive them. The widgets' copy
+     (awqat_widget.xml, with today's and tomorrow's meeting titles in it) stays behind too: the app writes it afresh
+     the first time it opens. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="voice/" />
         <exclude domain="file" path="agenda/" />
+        <exclude domain="sharedpref" path="awqat_widget.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="file" path="voice/" />
         <exclude domain="file" path="agenda/" />
+        <exclude domain="sharedpref" path="awqat_widget.xml" />
     </device-transfer>
 </data-extraction-rules>

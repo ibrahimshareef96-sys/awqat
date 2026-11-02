@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
@@ -81,12 +80,16 @@ public class DhikrWidget extends AppWidgetProvider {
     private static RemoteViews build(Context context, LiveData.Item dhikr) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_dhikr);
         if (dhikr == null) {
+            // While the place is only guessed nothing is open to count (the windows would be Makkah's): it says so, and a
+            // tap opens Home, where the place is set.
+            boolean unset = SnapshotJson.placeUnset(SnapshotJson.read(context));
+            String words = context.getString(unset ? R.string.widget_set_place : R.string.dhikr_nothing);
             views.setViewVisibility(R.id.dhikr_name, View.GONE);
             views.setViewVisibility(R.id.dhikr_add, View.GONE);
             views.setTextViewTextSize(R.id.dhikr_count, TypedValue.COMPLEX_UNIT_SP, NOTHING_SP);
-            views.setTextViewText(R.id.dhikr_count, context.getString(R.string.dhikr_nothing));
-            views.setContentDescription(R.id.dhikr_root, context.getString(R.string.dhikr_nothing));
-            views.setOnClickPendingIntent(R.id.dhikr_root, openModes(context));
+            views.setTextViewText(R.id.dhikr_count, words);
+            views.setContentDescription(R.id.dhikr_root, words);
+            views.setOnClickPendingIntent(R.id.dhikr_root, unset ? WidgetIntents.open(context, "home", 7) : openModes(context));
             return views;
         }
         int shown = LiveData.shownCount(dhikr.count, LiveStore.pendingFor(context, dhikr.key), dhikr.of);
@@ -108,8 +111,6 @@ public class DhikrWidget extends AppWidgetProvider {
     }
 
     private static PendingIntent openModes(Context context) {
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(MODES_LINK), context, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        return PendingIntent.getActivity(context, 5, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        return WidgetIntents.open(context, "modes", 5);
     }
 }

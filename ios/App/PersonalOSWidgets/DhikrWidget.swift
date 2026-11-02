@@ -26,6 +26,8 @@ struct CountDhikrIntent: AppIntent {
 struct DhikrEntry: TimelineEntry {
     enum State {
         case noSnapshot
+        /// The place is only guessed: nothing is open to count, as the windows would be Makkah's.
+        case placeUnset
         case nothingToCount
         case counting(key: String, name: String, count: Int, of: Int)
     }
@@ -37,6 +39,7 @@ struct DhikrEntry: TimelineEntry {
     /// rewind it, and neither surface has to rewrite what the app wrote.
     static func now() -> DhikrEntry {
         guard let snapshot = SharedStore.snapshot() else { return DhikrEntry(date: Date(), state: .noSnapshot) }
+        if snapshot.placeUnset { return DhikrEntry(date: Date(), state: .placeUnset) }
         guard let dhikr = snapshot.dhikr else { return DhikrEntry(date: Date(), state: .nothingToCount) }
         let count = min(dhikr.of, dhikr.n + SharedStore.waiting(for: dhikr.key))
         return DhikrEntry(date: Date(), state: .counting(key: dhikr.key, name: dhikr.name, count: count, of: dhikr.of))
@@ -83,11 +86,13 @@ struct DhikrView: View {
         switch entry.state {
         case .noSnapshot:
             calm("Open the app once")
+        case .placeUnset:
+            calm("Set your place")
         case .nothingToCount:
             calm("Nothing to count now")
         case let .counting(key, name, count, of):
             counting(key: key, name: name, count: count, of: of)
-                .widgetURL(URL(string: "awqat://go/modes"))
+                .widgetURL(WidgetLinks.modes)
         }
     }
 
@@ -97,7 +102,7 @@ struct DhikrView: View {
             .foregroundStyle(Palette.ivory)
             .minimumScaleFactor(0.7)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .widgetURL(URL(string: "awqat://go/home"))
+            .widgetURL(WidgetLinks.home)
     }
 
     private func counting(key: String, name: String, count: Int, of: Int) -> some View {

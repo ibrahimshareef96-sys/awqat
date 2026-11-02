@@ -41,6 +41,16 @@
 		7A1C0E9F2EB000000000004D /* InstrumentSerif-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB000000000002B /* InstrumentSerif-Regular.ttf */; };
 		7A1C0E9F2EB000000000004E /* OFL-InstrumentSerif.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB000000000002C /* OFL-InstrumentSerif.txt */; };
 		7A1C0E9F2EB0000000000050 /* PersonalOSWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB000000000002D /* PersonalOSWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7A1C0E9F2EB0000000000111 /* WidgetCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000101 /* WidgetCalendar.swift */; };
+		7A1C0E9F2EB0000000000112 /* PrayerDayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000102 /* PrayerDayWidget.swift */; };
+		7A1C0E9F2EB0000000000113 /* QuranWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000103 /* QuranWidget.swift */; };
+		7A1C0E9F2EB0000000000114 /* AdhkarWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000104 /* AdhkarWidget.swift */; };
+		7A1C0E9F2EB0000000000115 /* AgendaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000105 /* AgendaWidget.swift */; };
+		7A1C0E9F2EB0000000000116 /* HijriWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000106 /* HijriWidget.swift */; };
+		7A1C0E9F2EB0000000000117 /* TalkControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000107 /* TalkControl.swift */; };
+		7A1C0E9F2EB0000000000118 /* OpenTalkIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000108 /* OpenTalkIntent.swift */; };
+		7A1C0E9F2EB0000000000121 /* OpenTalkIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000108 /* OpenTalkIntent.swift */; };
+		7A1C0E9F2EB0000000000122 /* AwqatIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1C0E9F2EB0000000000109 /* AwqatIntents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -102,6 +112,15 @@
 		7A1C0E9F2EB000000000002B /* InstrumentSerif-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Regular.ttf"; sourceTree = "<group>"; };
 		7A1C0E9F2EB000000000002C /* OFL-InstrumentSerif.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-InstrumentSerif.txt"; sourceTree = "<group>"; };
 		7A1C0E9F2EB000000000002D /* PersonalOSWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PersonalOSWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A1C0E9F2EB0000000000101 /* WidgetCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCalendar.swift; sourceTree = "<group>"; };
+		7A1C0E9F2EB0000000000102 /* PrayerDayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerDayWidget.swift; sourceTree = "<group>"; };
+		7A1C0E9F2EB0000000000103 /* QuranWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranWidget.swift; sourceTree = "<group>"; };
+		7A1C0E9F2EB0000000000104 /* AdhkarWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdhkarWidget.swift; sourceTree = "<group>"; };
+		7A1C0E9F2EB0000000000105 /* AgendaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgendaWidget.swift; sourceTree = "<group>"; };
+		7A1C0E9F2EB0000000000106 /* HijriWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HijriWidget.swift; sourceTree = "<group>"; };
+		7A1C0E9F2EB0000000000107 /* TalkControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TalkControl.swift; sourceTree = "<group>"; };
+		7A1C0E9F2EB0000000000108 /* OpenTalkIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenTalkIntent.swift; sourceTree = "<group>"; };
+		7A1C0E9F2EB0000000000109 /* AwqatIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AwqatIntents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +169,7 @@
 				7A1C0E9F2EB0000000000015 /* LiveBridgePlugin.swift */,
 				7A1C0E9F2EB0000000000017 /* LiveActivities.swift */,
 				7A1C0E9F2EB0000000000016 /* WidgetBridgePlugin.swift */,
+				7A1C0E9F2EB0000000000109 /* AwqatIntents.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -171,6 +191,13 @@
 				7A1C0E9F2EB0000000000023 /* NextPrayerWidget.swift */,
 				7A1C0E9F2EB0000000000024 /* NextPrayerViews.swift */,
 				7A1C0E9F2EB0000000000025 /* DhikrWidget.swift */,
+				7A1C0E9F2EB0000000000102 /* PrayerDayWidget.swift */,
+				7A1C0E9F2EB0000000000103 /* QuranWidget.swift */,
+				7A1C0E9F2EB0000000000104 /* AdhkarWidget.swift */,
+				7A1C0E9F2EB0000000000105 /* AgendaWidget.swift */,
+				7A1C0E9F2EB0000000000106 /* HijriWidget.swift */,
+				7A1C0E9F2EB0000000000107 /* TalkControl.swift */,
+				7A1C0E9F2EB0000000000101 /* WidgetCalendar.swift */,
 				7A1C0E9F2EB0000000000026 /* LiveItemActivity.swift */,
 				7A1C0E9F2EB0000000000027 /* LiveItemViews.swift */,
 				7A1C0E9F2EB0000000000022 /* SystemClock.swift */,
@@ -190,6 +217,7 @@
 				7A1C0E9F2EB0000000000011 /* CountDhikrLiveIntent.swift */,
 				7A1C0E9F2EB0000000000012 /* SharedStore.swift */,
 				7A1C0E9F2EB0000000000013 /* WidgetSnapshot.swift */,
+				7A1C0E9F2EB0000000000108 /* OpenTalkIntent.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -329,6 +357,8 @@
 				7A1C0E9F2EB0000000000035 /* LiveBridgePlugin.swift in Sources */,
 				7A1C0E9F2EB0000000000036 /* WidgetBridgePlugin.swift in Sources */,
 				7A1C0E9F2EB0000000000037 /* LiveActivities.swift in Sources */,
+				7A1C0E9F2EB0000000000121 /* OpenTalkIntent.swift in Sources */,
+				7A1C0E9F2EB0000000000122 /* AwqatIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,6 +378,14 @@
 				7A1C0E9F2EB0000000000049 /* DhikrWidget.swift in Sources */,
 				7A1C0E9F2EB000000000004A /* LiveItemActivity.swift in Sources */,
 				7A1C0E9F2EB000000000004B /* LiveItemViews.swift in Sources */,
+				7A1C0E9F2EB0000000000111 /* WidgetCalendar.swift in Sources */,
+				7A1C0E9F2EB0000000000112 /* PrayerDayWidget.swift in Sources */,
+				7A1C0E9F2EB0000000000113 /* QuranWidget.swift in Sources */,
+				7A1C0E9F2EB0000000000114 /* AdhkarWidget.swift in Sources */,
+				7A1C0E9F2EB0000000000115 /* AgendaWidget.swift in Sources */,
+				7A1C0E9F2EB0000000000116 /* HijriWidget.swift in Sources */,
+				7A1C0E9F2EB0000000000117 /* TalkControl.swift in Sources */,
+				7A1C0E9F2EB0000000000118 /* OpenTalkIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

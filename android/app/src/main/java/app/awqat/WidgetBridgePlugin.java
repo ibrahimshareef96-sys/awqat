@@ -8,12 +8,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * The app hands the home-screen widgets what they show. One method, one fixed place to keep it, the two widgets to
- * redraw: nothing from the page chooses a file name or a class.
+ * The app hands the home-screen widgets what they show. One method, one fixed place to keep it, the widgets that read
+ * it to redraw: nothing from the page chooses a file name or a class.
  */
 @CapacitorPlugin(name = "WidgetBridge")
 public class WidgetBridgePlugin extends Plugin {
-    /** About 60 prayers and two days of lines come to a few kilobytes; past this it is not a snapshot. */
+    /** About 60 prayers, 12 prayer days, the adhkar and 8 meetings come to some 15 KB; past this it is not a snapshot. */
     private static final int SNAPSHOT_MAX = 100_000;
 
     @PluginMethod
@@ -40,6 +40,10 @@ public class WidgetBridgePlugin extends Plugin {
         TodayWidget.save(getContext(), checked);
         TodayWidget.refreshAll(getContext());
         DhikrWidget.refreshAll(getContext());
+        PrayerDayWidget.refreshAll(getContext());
+        QuranWidget.refreshAll(getContext());
+        AdhkarWidget.refreshAll(getContext());
+        AgendaWidget.refreshAll(getContext());
         call.resolve();
     }
 }

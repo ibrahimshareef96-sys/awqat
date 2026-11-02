@@ -1,12 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-private enum Links {
-    static let faith = URL(string: "awqat://go/faith")
-    static let home = URL(string: "awqat://go/home")
-    static let mushaf = URL(string: "awqat://go/mushaf")
-    static let revise = URL(string: "awqat://go/revise")
-}
+private typealias Links = WidgetLinks
 
 struct NextPrayerView: View {
     let entry: NextPrayerEntry
@@ -21,39 +16,50 @@ struct NextPrayerView: View {
     }
 
     private var isAccessory: Bool {
-        family == .accessoryCircular || family == .accessoryRectangular
+        family == .accessoryCircular || family == .accessoryRectangular || family == .accessoryInline
     }
 
     @ViewBuilder
     private var content: some View {
         switch (family, entry.prayer) {
+        case (.accessoryInline, let prayer?):
+            // "Asr 15:21": the system draws an inline line in its own font, one line, no colours.
+            Text(verbatim: "\(prayer.name) \(prayer.time)")
+        case (.accessoryInline, nil):
+            Text(calmText)
         case (.accessoryCircular, let prayer?):
             CircularPrayer(prayer: prayer, from: entry.date)
         case (.accessoryCircular, nil):
-            OpenTheApp(font: .system(size: 11, weight: .medium), alignment: .center)
+            Calm(text: calmText, font: .system(size: 11, weight: .medium), alignment: .center)
         case (.accessoryRectangular, let prayer?):
             RectangularPrayer(prayer: prayer, from: entry.date)
         case (.accessoryRectangular, nil):
-            OpenTheApp(font: .system(size: 15, weight: .medium), alignment: .leading)
+            Calm(text: calmText, font: .system(size: 15, weight: .medium), alignment: .leading)
         case (.systemMedium, let prayer?):
             MediumPrayer(prayer: prayer, entry: entry)
         case (_, let prayer?):
             PrayerColumn(prayer: prayer, from: entry.date)
         case (_, nil):
-            OpenTheApp(font: Palette.serif(24), alignment: .leading)
+            Calm(text: calmText, font: Palette.serif(24), alignment: .leading)
                 .foregroundStyle(Palette.ivory)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
+
+    /// A guessed place's times are Makkah's, so none of them is shown until the place is set.
+    private var calmText: LocalizedStringKey {
+        entry.placeUnset ? "Set your place" : "Open the app once"
+    }
 }
 
 /// The calm state: nothing to show yet, and nothing wrong.
-private struct OpenTheApp: View {
+struct Calm: View {
+    let text: LocalizedStringKey
     let font: Font
     let alignment: TextAlignment
 
     var body: some View {
-        Text("Open the app once")
+        Text(text)
             .font(font)
             .multilineTextAlignment(alignment)
             .minimumScaleFactor(0.7)

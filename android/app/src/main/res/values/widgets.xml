@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The widgets' repeated pieces. A box of fixed height whose text sizes itself down (autoSize) keeps a larger font
+         whole where five prayers or two sets share one row. -->
+    <style name="PrayerDayColumn">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center_horizontal</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="PrayerDayName">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">16dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">#ADECE6D8</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:autoSizeMinTextSize">7sp</item>
+        <item name="android:autoSizeMaxTextSize">11sp</item>
+        <item name="android:autoSizeStepGranularity">1sp</item>
+    </style>
+
+    <style name="PrayerDayTime">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">26dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:fontFamily">serif</item>
+        <item name="android:textColor">#ECE6D8</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:autoSizeMinTextSize">9sp</item>
+        <item name="android:autoSizeMaxTextSize">18sp</item>
+        <item name="android:autoSizeStepGranularity">1sp</item>
+    </style>
+
+    <style name="AdhkarSet">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="AdhkarName">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">13dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textColor">#ADECE6D8</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:autoSizeMinTextSize">6sp</item>
+        <item name="android:autoSizeMaxTextSize">9sp</item>
+        <item name="android:autoSizeStepGranularity">1sp</item>
+    </style>
+
+    <style name="AdhkarState">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:fontFamily">serif</item>
+        <item name="android:textColor">#ECE6D8</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:autoSizeMinTextSize">8sp</item>
+        <item name="android:autoSizeMaxTextSize">15sp</item>
+        <item name="android:autoSizeStepGranularity">1sp</item>
+    </style>
+
+    <!-- A label in spaced capitals, as the app sets its labels. -->
+    <style name="WidgetLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:letterSpacing">0.22</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">#ADECE6D8</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="WidgetLine">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:paddingTop">1dp</item>
+        <item name="android:paddingBottom">1dp</item>
+        <item name="android:textColor">#E6ECE6D8</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+</resources>

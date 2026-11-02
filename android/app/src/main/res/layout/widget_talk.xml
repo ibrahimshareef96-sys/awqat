@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Talk, 1 x 1: the microphone and its word, the whole widget one button. It opens the Talk sheet; listening waits for
+     the Talk button there, as for every link. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/talk_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:contentDescription="@string/talk_widget_description"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+    <!-- Its colour, the one accent, is set in code (setColorFilter): a launcher inflates no app:tint. -->
+    <ImageView
+        android:id="@+id/talk_icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_talk" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:singleLine="true"
+        android:text="@string/talk_widget_label"
+        android:textColor="#ECE6D8"
+        android:textSize="11sp" />
+</LinearLayout>

@@ -1,6 +1,5 @@
 package app.awqat;
 
-import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -8,7 +7,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -69,11 +67,15 @@ public class TodayWidget extends AppWidgetProvider {
         final String[] dates;
         final String[] quran;
         final String[] revise;
+        /** Today's reading against the goal, for the Quran widget; "" from an app older than it. */
+        final String[] read;
         final String steps;
         final boolean live;
+        /** The place is only guessed: no prayer is in the snapshot, and the widget says "Set your place". */
+        final boolean placeUnset;
 
         Snapshot(String tz, String[] names, String[] times, long[] at, long[] iqama, String[] dates, String[] quran,
-                String[] revise, String steps, boolean live) {
+                String[] revise, String[] read, String steps, boolean live, boolean placeUnset) {
             this.tz = tz;
             this.names = names;
             this.times = times;
@@ -82,8 +84,10 @@ public class TodayWidget extends AppWidgetProvider {
             this.dates = dates;
             this.quran = quran;
             this.revise = revise;
+            this.read = read;
             this.steps = steps;
             this.live = live;
+            this.placeUnset = placeUnset;
         }
     }
 
@@ -109,8 +113,7 @@ public class TodayWidget extends AppWidgetProvider {
 
     @Override
     public void onDisabled(Context context) {
-        AlarmManager alarms = context.getSystemService(AlarmManager.class);
-        if (alarms != null) alarms.cancel(refreshIntent(context));
+        WidgetIntents.cancel(context, refreshIntent(context));
     }
 
     /** Keeps a snapshot from the app (already checked by the bridge). */
@@ -132,7 +135,7 @@ public class TodayWidget extends AppWidgetProvider {
         for (int id : ids) {
             manager.updateAppWidget(id, viewsFor(context, snapshot, now, manager.getAppWidgetOptions(id)));
         }
-        long midnight = now.toLocalDate().plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli();
+        long midnight = nextMidnight(now);
         long[] at = snapshot == null ? new long[0] : snapshot.at;
         long nowMs = now.toInstant().toEpochMilli();
         scheduleRefresh(context, TodayWidgetData.nextChange(at, nowMs, midnight));
@@ -140,8 +143,7 @@ public class TodayWidget extends AppWidgetProvider {
     }
 
     private static void onNoWidgets(Context context) {
-        AlarmManager alarms = context.getSystemService(AlarmManager.class);
-        if (alarms != null) alarms.cancel(refreshIntent(context));
+        WidgetIntents.cancel(context, refreshIntent(context));
     }
 
     private static SharedPreferences prefs(Context context) {
@@ -149,14 +151,24 @@ public class TodayWidget extends AppWidgetProvider {
     }
 
     private static ZoneId zoneOf(Snapshot snapshot) {
-        if (snapshot != null) {
+        return zone(snapshot == null ? null : snapshot.tz);
+    }
+
+    /** The snapshot's zone, or the phone's own when there is none or this phone does not know it. */
+    static ZoneId zone(String tz) {
+        if (tz != null) {
             try {
-                return ZoneId.of(snapshot.tz);
+                return ZoneId.of(tz);
             } catch (DateTimeException e) {
                 // A zone this phone does not know: its own zone instead.
             }
         }
         return ZoneId.systemDefault();
+    }
+
+    /** The next midnight where the snapshot's days are counted: when each day's lines move on. */
+    static long nextMidnight(ZonedDateTime now) {
+        return now.toLocalDate().plusDays(1).atStartOfDay(now.getZone()).toInstant().toEpochMilli();
     }
 
     /** The snapshot, or null when there is none yet or it cannot be read. Lists are capped and lines cut to fit. */
@@ -184,6 +196,7 @@ public class TodayWidget extends AppWidgetProvider {
             String[] dates = new String[dayCount];
             String[] quran = new String[dayCount];
             String[] revise = new String[dayCount];
+            String[] read = new String[dayCount];
             for (int i = 0; i < dayCount; i++) {
                 JSONObject d = days.getJSONObject(i);
                 String date = d.optString("date");
@@ -191,9 +204,11 @@ public class TodayWidget extends AppWidgetProvider {
                 dates[i] = DAY.matcher(date).matches() ? date : "";
                 quran[i] = TodayWidgetData.clip(d.optString("quran"), LINE_MAX);
                 revise[i] = TodayWidgetData.clip(d.optString("revise"), LINE_MAX);
+                read[i] = TodayWidgetData.clip(d.optString("read"), LINE_MAX);
             }
-            return new Snapshot(root.optString("tz", ""), names, times, at, iqama, dates, quran, revise,
-                    TodayWidgetData.clip(root.optString("steps"), LINE_MAX), root.optBoolean("live", true));
+            return new Snapshot(root.optString("tz", ""), names, times, at, iqama, dates, quran, revise, read,
+                    TodayWidgetData.clip(root.optString("steps"), LINE_MAX), root.optBoolean("live", true),
+                    SnapshotJson.placeUnset(root));
         } catch (JSONException e) {
             return null;
         }
@@ -231,9 +246,23 @@ public class TodayWidget extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(context.getPackageName(), layout);
         boolean label = layout != R.layout.widget_today_small;
         boolean lines = layout == R.layout.widget_today;
+        boolean unset = snapshot != null && snapshot.placeUnset;
         views.setOnClickPendingIntent(R.id.widget_root, open(context, "home", 1));
-        views.setOnClickPendingIntent(R.id.widget_prayer, open(context, "faith", 2));
+        // While the place is only guessed, the prayer opens Home, where it is set; Faith would show Makkah's times.
+        views.setOnClickPendingIntent(R.id.widget_prayer, unset ? open(context, "home", 1) : open(context, "faith", 2));
         int next = snapshot == null ? -1 : TodayWidgetData.nextPrayer(snapshot.at, now.toInstant().toEpochMilli());
+        if (unset) {
+            // A guessed place's times are Makkah's: none is shown. The Quran lines do not come from the place, so they stay.
+            if (label) views.setTextViewText(R.id.widget_label, context.getString(R.string.widget_today_label));
+            views.setTextViewText(R.id.widget_name, context.getString(R.string.widget_set_place));
+            views.setTextViewTextSize(R.id.widget_name, TypedValue.COMPLEX_UNIT_SP, NUDGE_SP);
+            views.setViewVisibility(R.id.widget_countdown, View.GONE);
+            if (lines) {
+                fillDay(context, views, snapshot, now.toLocalDate().toString());
+                fillSteps(context, views, steps ? snapshot.steps : "");
+            }
+            return views;
+        }
         if (next < 0) {
             // No snapshot yet, or it ran out: a quiet nudge to open the app, small enough to fit the narrowest widget.
             if (label) views.setTextViewText(R.id.widget_label, context.getString(R.string.widget_today_label));
@@ -300,34 +329,15 @@ public class TodayWidget extends AppWidgetProvider {
 
     /** Opens the app on a screen; the app follows only the screens the widget sends. */
     private static PendingIntent open(Context context, String screen, int requestCode) {
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("awqat://go/" + screen), context, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        return PendingIntent.getActivity(context, requestCode, intent,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        return WidgetIntents.open(context, screen, requestCode);
     }
 
     private static PendingIntent refreshIntent(Context context) {
-        Intent intent = new Intent(context, TodayWidget.class).setAction(ACTION_REFRESH);
-        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        return WidgetIntents.refresh(context, TodayWidget.class, ACTION_REFRESH);
     }
 
-    /**
-     * Wakes the widget just after its next change. Not a wake-up alarm: if the phone sleeps through it, the widget moves
-     * on as soon as the screen comes back, which is the only time it is seen.
-     */
+    /** Wakes the widget just after its next change (see WidgetIntents.wakeAt). */
     private static void scheduleRefresh(Context context, long when) {
-        AlarmManager alarms = context.getSystemService(AlarmManager.class);
-        if (alarms == null) return;
-        PendingIntent intent = refreshIntent(context);
-        long at = when + 1_000L;
-        try {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarms.canScheduleExactAlarms()) {
-                alarms.setExact(AlarmManager.RTC, at, intent);
-            } else {
-                alarms.set(AlarmManager.RTC, at, intent);
-            }
-        } catch (SecurityException e) {
-            alarms.set(AlarmManager.RTC, at, intent);
-        }
+        WidgetIntents.wakeAt(context, refreshIntent(context), when);
     }
 }

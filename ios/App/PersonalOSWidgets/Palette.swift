@@ -15,6 +15,21 @@ enum Palette {
     static func clock(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight).monospacedDigit()
     }
+
+    /// The system font at a text style, so it grows with the user's text size; each widget caps it with
+    /// minimumScaleFactor, so a larger size shrinks to fit rather than being cut.
+    static func text(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
+        .system(style, weight: weight)
+    }
+
+    static func digits(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
+        .system(style, weight: weight).monospacedDigit()
+    }
+
+    /// The app's serif at a size that grows with the user's text size, from the text style given.
+    static func serif(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        .custom("InstrumentSerif-Regular", size: size, relativeTo: style)
+    }
 }
 
 /// A short line in spaced capitals, as the app sets its labels.

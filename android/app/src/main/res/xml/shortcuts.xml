@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app icon's long-press shortcuts. Each opens the app through the same checked link as a widget tap
+     (awqat://go/<screen>); Talk opens on its sheet and waits for the Talk button. targetPackage is the application id:
+     change it with the id (README, "Build it"). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_talk"
+        android:shortcutId="talk"
+        android:shortcutLongLabel="@string/shortcut_talk_long"
+        android:shortcutShortLabel="@string/shortcut_talk">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="awqat://go/talk"
+            android:targetClass="app.awqat.MainActivity"
+            android:targetPackage="app.awqat" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_adhkar"
+        android:shortcutId="adhkar"
+        android:shortcutLongLabel="@string/shortcut_adhkar_long"
+        android:shortcutShortLabel="@string/shortcut_adhkar">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="awqat://go/adhkar"
+            android:targetClass="app.awqat.MainActivity"
+            android:targetPackage="app.awqat" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/shortcut_quran"
+        android:shortcutId="quran"
+        android:shortcutLongLabel="@string/shortcut_quran_long"
+        android:shortcutShortLabel="@string/shortcut_quran">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="awqat://go/mushaf"
+            android:targetClass="app.awqat.MainActivity"
+            android:targetPackage="app.awqat" />
+    </shortcut>
+</shortcuts>

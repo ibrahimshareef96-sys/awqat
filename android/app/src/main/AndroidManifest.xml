@@ -25,6 +25,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Talk, Adhkar and Read Quran on a long press of the icon: awqat://go/<screen> links, checked as a widget's. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+
         </activity>
 
         <provider
@@ -67,6 +72,94 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_dhikr_info" />
         </receiver>
+
+        <!-- The prayer day, the Quran, the adhkar and the next meeting. As TodayWidget: their only inputs are the snapshot
+             and these broadcasts, each of which only redraws from it; not exported. -->
+        <receiver
+            android:name=".PrayerDayWidget"
+            android:exported="false"
+            android:label="@string/prayer_day_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_day_info" />
+        </receiver>
+
+        <receiver
+            android:name=".QuranWidget"
+            android:exported="false"
+            android:label="@string/quran_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quran_info" />
+        </receiver>
+
+        <receiver
+            android:name=".AdhkarWidget"
+            android:exported="false"
+            android:label="@string/adhkar_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_adhkar_info" />
+        </receiver>
+
+        <!-- Home screen only (widget_agenda_info.xml): a meeting's title never goes on the lock screen. -->
+        <receiver
+            android:name=".AgendaWidget"
+            android:exported="false"
+            android:label="@string/agenda_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_agenda_info" />
+        </receiver>
+
+        <!-- One tap to Talk. Drawn once; nothing in it changes. -->
+        <receiver
+            android:name=".TalkWidget"
+            android:exported="false"
+            android:label="@string/talk_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_talk_info" />
+        </receiver>
+
+        <!-- "Talk to Awqat" in Quick Settings. Exported, as the system binds it, but only a holder of the system's
+             BIND_QUICK_SETTINGS_TILE permission can; it only opens the app on a fixed, checked link. -->
+        <service
+            android:name=".TalkTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_talk"
+            android:label="@string/talk_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="false" />
+        </service>
 
         <!-- The "+1" on the live dhikr card, and the swipe that dismisses a live card. Only this app's own PendingIntents
              reach it. -->
