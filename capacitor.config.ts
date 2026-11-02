@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   appId: "app.awqat",
   appName: "Awqat",
   webDir: "dist",
-  /** The WebView's own colour before the page paints: graphite, never a white flash. */
-  backgroundColor: "#121219",
+  /** The WebView's own colour before the page paints: Itqan's ink, never a white flash. */
+  backgroundColor: "#0B0A0D",
   /** Never log plugin calls, even in a debug build: they carry calendar addresses and session tokens. */
   loggingBehavior: "none",
   android: { allowMixedContent: false, webContentsDebuggingEnabled: false },
