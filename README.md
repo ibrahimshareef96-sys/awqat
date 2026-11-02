@@ -55,8 +55,14 @@ tick; and the next seven days in a few lines. Past weeks stay to read back, and 
 choose is there if you turn it on. What you write stays on the phone; with your own server it syncs to your other
 devices, and with Talk set up the assistant hears the week's intentions, never the reflections.
 
-**On the lock screen.** Home-screen widgets for the next prayer with a countdown and a dhikr counter that works with
-the app closed. On iPhone, Live Activities and the Dynamic Island. On Android, Live Updates.
+**On the lock screen.** Home-screen widgets for the next prayer with a countdown, the prayer day with the Hijri date,
+the Quran page and today's reading, the morning and evening adhkar, the next meeting with the prayers around it, and a
+dhikr counter that works with the app closed. On iPhone, Lock Screen widgets for the next prayer and the Hijri date,
+Live Activities and the Dynamic Island. On Android, Live Updates. See [docs/live-surfaces.md](docs/live-surfaces.md).
+
+**By voice, at no cost per call.** On iPhone, "Talk to Awqat", "Open adhkar in Awqat" and "When is the next prayer in
+Awqat" through Siri, and a Talk control. On Android, Talk, Adhkar and Read Quran on a long press of the icon, and a
+"Talk to Awqat" Quick Settings tile. Talk opens and waits for your tap before it listens.
 
 **Optional, with your own server.** A voice assistant you can talk to about your day, sync between your devices, and
 Work and Inbox feeds. These need a backend you run yourself. See [docs/backend.md](docs/backend.md). Without one,
@@ -96,7 +102,8 @@ Point Claude Code, Codex or any agent at [AGENTS.md](AGENTS.md) first (Claude Co
 adding a feature, so an agent can make a change that keeps what Awqat promises.
 
 Before you publish a build of your own, change the app id `app.awqat` (in `capacitor.config.ts`,
-`android/app/build.gradle` and the Xcode project) and the iOS App Group `group.app.awqat`, and set your own Apple
+`android/app/build.gradle`, `android/app/src/main/res/xml/shortcuts.xml` and the Xcode project) and the iOS App Group
+`group.app.awqat`, and set your own Apple
 team in Xcode. Release signing on Android reads `android/keystore.properties` or the file named by
 `AWQAT_KEYSTORE_PROPS`; neither is ever committed.
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Adhkar shortcut's icon: the sun on the app's ground, inside the launcher's safe zone. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ground" />
+    <foreground>
+        <inset
+            android:drawable="@drawable/ic_adhkar"
+            android:inset="32dp" />
+    </foreground>
+</adaptive-icon>

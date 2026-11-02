@@ -1,13 +1,15 @@
 import SwiftUI
 import WidgetKit
 
-/// One moment of the next-prayer widget. No prayer means the snapshot is missing, unreadable, or has run out.
+/// One moment of the next-prayer widget. No prayer means the snapshot is missing, unreadable, has run out, or the place
+/// is only guessed (`placeUnset`: then it says "Set your place").
 struct NextPrayerEntry: TimelineEntry {
     let date: Date
     let prayer: WidgetSnapshot.Prayer?
     let quran: String?
     let revise: String?
     let steps: String?
+    var placeUnset = false
 }
 
 /// Native holds no prayer logic beyond this: the next time from the list it was given, with an entry at each one and at
@@ -15,22 +17,24 @@ struct NextPrayerEntry: TimelineEntry {
 enum NextPrayerTimeline {
     /// About a week. When these run out WidgetKit asks again and the next week of the snapshot follows.
     private static let prayersMax = 40
-    private static let daysMax = 16
 
     static func entries(from snapshot: WidgetSnapshot?, now: Date) -> [NextPrayerEntry] {
         guard let snapshot else {
             return [NextPrayerEntry(date: now, prayer: nil, quran: nil, revise: nil, steps: nil)]
         }
+        if snapshot.placeUnset {
+            return [NextPrayerEntry(date: now, prayer: nil, quran: nil, revise: nil, steps: nil, placeUnset: true)]
+        }
         let prayers = snapshot.prayers.filter { $0.date > now }.sorted { $0.at < $1.at }
         let window = prayers.prefix(prayersMax).map(\.date)
-        let zone = TimeZone(identifier: snapshot.tz) ?? .current
+        let zone = WidgetCalendar.zone(snapshot.tz)
         let moments = Set([now] + window + midnights(after: now, through: window.last, in: zone))
         return moments.sorted().map { entry(at: $0, prayers: prayers, snapshot: snapshot, zone: zone) }
     }
 
     private static func entry(at date: Date, prayers: [WidgetSnapshot.Prayer], snapshot: WidgetSnapshot,
                               zone: TimeZone) -> NextPrayerEntry {
-        let today = dayString(date, in: zone)
+        let today = WidgetCalendar.dayString(date, in: zone)
         let day = snapshot.days.first { $0.date == today }
         // The page to read on does not change at midnight; the revision and the steps belong to their own day.
         let quran = day?.quran ?? snapshot.days.first?.quran
@@ -41,24 +45,12 @@ enum NextPrayerTimeline {
 
     private static func midnights(after now: Date, through last: Date?, in zone: TimeZone) -> [Date] {
         guard let last else { return [] }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = zone
-        // Bounded by what the snapshot can hold, so a corrupt far-off time cannot keep the extension here.
-        let today = calendar.startOfDay(for: now)
-        return (1...daysMax).compactMap { calendar.date(byAdding: .day, value: $0, to: today) }.filter { $0 < last }
-    }
-
-    private static func dayString(_ date: Date, in zone: TimeZone) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = zone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+        return WidgetCalendar.midnights(after: now, count: WidgetCalendar.daysMax, in: zone).filter { $0 < last }
     }
 }
 
-private extension String {
+extension String {
+    /// Nil for an empty line, so a widget can leave it out.
     var nonEmpty: String? { isEmpty ? nil : self }
 }
 
@@ -87,6 +79,6 @@ struct NextPrayerWidget: Widget {
         }
         .configurationDisplayName("Next prayer")
         .description("The next prayer counting down, the page to read on, and today's revision.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular])
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }

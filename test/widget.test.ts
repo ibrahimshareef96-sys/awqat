@@ -10,9 +10,11 @@ vi.mock("@capacitor/core", () => ({
 
 import { DUBAI } from "./fixtures/places.ts";
 import { addDays, dayTimes, type DayTimes } from "../src/prayer/times.ts";
-import { emptyQuranLog, logRevision, setPosition } from "../src/quran/log.ts";
+import { emptyQuranLog, logRead, logRevision, setDailyGoal, setPosition } from "../src/quran/log.ts";
 import { makePlan } from "../src/quran/murajaah.ts";
-import { linkTarget, syncWidget, widgetSnapshot } from "../src/app/widget.ts";
+import { adhkarFor, emptyAdhkarLog, islamicMidnight, setDone } from "../src/faith/adhkar.ts";
+import { adhkarScreen, linkTarget, syncWidget, widgetSnapshot } from "../src/app/widget.ts";
+import { prayerDays, readLine } from "../src/app/widgetDays.ts";
 
 /** Thursday 22 Oct 2026 to Sunday 1 Nov, Dubai method. */
 const days: DayTimes[] = Array.from({ length: 11 }, (_, i) => dayTimes(DUBAI, addDays({ y: 2026, m: 10, d: 22 }, i), "Dubai"));
@@ -35,8 +37,8 @@ describe("what the widget is given", () => {
 
   it("gives today's and tomorrow's lines: the page the user stopped reading on, and the revision left", () => {
     expect(snapshot.days).toEqual([
-      { date: "2026-10-23", quran: "Page 313 of 604", revise: "Revision done today" },
-      { date: "2026-10-24", quran: "Page 313 of 604", revise: "Revise Juz 2" },
+      { date: "2026-10-23", quran: "Page 313 of 604", revise: "Revision done today", read: "0 pages today" },
+      { date: "2026-10-24", quran: "Page 313 of 604", revise: "Revise Juz 2", read: "0 pages today" },
     ]);
     expect(snapshot.tz).toBe("Asia/Dubai");
   });
@@ -66,7 +68,7 @@ describe("what the widget is given", () => {
   it("leaves the revision line empty with no plan", () => {
     const plain = widgetSnapshot({ days, now: NOW, tz: "Asia/Dubai", today: "2026-10-23", quran: emptyQuranLog(), page: 1,
       plan: null });
-    expect(plain.days[0]).toEqual({ date: "2026-10-23", quran: "Page 1 of 604", revise: "" });
+    expect(plain.days[0]).toEqual({ date: "2026-10-23", quran: "Page 1 of 604", revise: "", read: "0 pages today" });
     // A page out of the mushaf is never shown.
     const odd = (page: number) => widgetSnapshot({ days, now: NOW, tz: "Asia/Dubai", today: "2026-10-23",
       quran: emptyQuranLog(), page, plan: null }).days[0].quran;
@@ -82,7 +84,7 @@ describe("telling the widget", () => {
   });
 
   const snap = (revise: string) => ({ v: 1 as const, tz: "Asia/Dubai", prayers: [],
-    days: [{ date: "2026-10-23", quran: "Page 1 of 604", revise }] });
+    days: [{ date: "2026-10-23", quran: "Page 1 of 604", revise, read: "0 pages today" }] });
 
   it("only when what it shows has changed", async () => {
     syncWidget(snap("Revise Juz 1"));
@@ -151,5 +153,164 @@ describe("links from the widget", () => {
     expect(linkTarget("awqat://go/faith?x=1")).toBeNull();
     expect(linkTarget("https://evil.example/go/faith")).toBeNull();
     expect(linkTarget("awqat://go/book:abc")).toBeNull();
+  });
+
+  it("open Talk, the adhkar and Agenda for the new widgets, shortcuts and Siri, and nothing near them", () => {
+    expect(linkTarget("awqat://go/talk")).toBe("talk");
+    expect(linkTarget("awqat://go/adhkar")).toBe("adhkar");
+    expect(linkTarget("awqat://go/agenda")).toBe("agenda");
+    for (const near of ["awqat://go/talk:start", "awqat://go/adhkar:morning", "awqat://go/agenda?day=1", "awqat://go/talk/",
+      "awqat://go/Talk", "awqat://talk", "awqat://go/talk\n", "awqat://go/add-book", "awqat://go/close", "awqat://go/money"]) {
+      expect(linkTarget(near)).toBeNull();
+    }
+  });
+});
+
+describe("the adhkar a link opens", () => {
+  const at = (iso: string) => new Date(iso);
+  // Dubai is UTC+4. Friday 23 Oct 2026: Fajr 05:04, Jumu'ah 12:06, Asr 15:22.
+  it("is the set open now", () => {
+    expect(adhkarScreen(days, at("2026-10-23T02:00:00Z"))).toBe("adhkar:morning");
+    expect(adhkarScreen(days, at("2026-10-23T13:00:00Z"))).toBe("adhkar:evening");
+  });
+
+  it("or the one that opens next: the evening after Dhuhr, the morning after the middle of the night", () => {
+    expect(adhkarScreen(days, NOW)).toBe("adhkar:evening");
+    expect(adhkarScreen(days, at("2026-10-23T21:30:00Z"))).toBe("adhkar:morning");
+    expect(adhkarScreen([], NOW)).toBe("adhkar:morning");
+  });
+});
+
+describe("the widgets' days", () => {
+  const base = { days, now: NOW, tz: "Asia/Dubai", today: "2026-10-23", quran: emptyQuranLog(), page: 1, plan: null };
+
+  it("gives each prayer day left its five prayers, the iqama after each but Jumu'ah, and its Hijri date", () => {
+    const s = widgetSnapshot(base);
+    const today = s.prayerDays?.[0];
+    expect(today?.date).toBe("2026-10-23");
+    expect(today?.prayers.map((p) => p.name)).toEqual(["Fajr", "Jumu'ah", "Asr", "Maghrib", "Isha"]);
+    // Past prayers stay on today's list, so the widget can mark the one under way.
+    expect(today?.prayers[0]).toMatchObject({ time: "05:04" });
+    expect(today?.prayers[2]).toMatchObject({ name: "Asr", time: "15:22", iqamaTime: "15:42" });
+    expect(today?.prayers[2].iqama).toBe((today?.prayers[2].at ?? 0) + 20 * 60_000);
+    expect(today?.prayers[1].iqama).toBeUndefined();
+    expect(today?.prayers[1].iqamaTime).toBeUndefined();
+    // A day after the Faith screen's own test date (22 Oct, 11 Jumada al-Ula), read for the day itself in any zone.
+    expect(today?.hijri).toEqual({ text: "12 Jumada al-Ula 1448", day: 12, month: "Jumada al-Ula" });
+    expect(s.prayerDays?.length).toBeLessThanOrEqual(12);
+  });
+
+  it("says when each prayer's time is over: Fajr at sunrise, Isha at the next Fajr, each other at the next adhan", () => {
+    const s = widgetSnapshot(base);
+    const [day, next] = [days.find((d) => d.date === "2026-10-23"), days.find((d) => d.date === "2026-10-24")];
+    const today = s.prayerDays?.[0].prayers ?? [];
+    expect(today.map((p) => p.until)).toEqual([day?.sunrise.getTime(), day?.asr.getTime(), day?.maghrib.getTime(),
+      day?.isha.getTime(), next?.fajr.getTime()]);
+    // The last day in the list has no next Fajr: its Isha has no end the widget could be told.
+    expect(s.prayerDays?.at(-1)?.prayers.at(-1)?.until).toBeUndefined();
+  });
+
+  it("writes the days out once while the day under way stays the same, and again when it moves on", () => {
+    const once = prayerDays(days, NOW, "Asia/Dubai");
+    expect(prayerDays(days, new Date(NOW.getTime() + 60_000), "Asia/Dubai")).toBe(once);
+    expect(prayerDays(days, NOW, "UTC")).not.toBe(once);
+    expect(prayerDays([...days], NOW, "Asia/Dubai")).toEqual(once);
+    expect(prayerDays(days, new Date("2026-10-24T02:00:00Z"), "Asia/Dubai")[0].date).toBe("2026-10-24");
+  });
+
+  it("keeps yesterday's prayer day until Fajr, so Isha after midnight is still marked", () => {
+    const early = widgetSnapshot({ ...base, now: new Date("2026-10-23T00:30:00Z") });
+    expect(early.prayerDays?.[0].date).toBe("2026-10-22");
+    expect(early.prayerDays?.[1].date).toBe("2026-10-23");
+  });
+
+  it("says when each adhkar set is open and whether it is said in full", () => {
+    const morningSaid = adhkarFor("morning").reduce((log, item) => setDone(log, "2026-10-23", "morning", item.id, true),
+      emptyAdhkarLog());
+    const s = widgetSnapshot({ ...base, adhkar: morningSaid });
+    const today = s.adhkar?.[0];
+    const day = days.find((d) => d.date === "2026-10-23");
+    const next = days.find((d) => d.date === "2026-10-24");
+    expect(today?.date).toBe("2026-10-23");
+    expect(today?.morning).toEqual({ from: day?.fajr.getTime(), to: day?.dhuhr.getTime(), said: true });
+    expect(today?.evening.from).toBe(day?.asr.getTime());
+    expect(today?.evening.to).toBe(day && next ? islamicMidnight(day, next).getTime() : 0);
+    expect(today?.evening.said).toBe(false);
+    // The last day has no next Fajr to end its evening: it is left out.
+    expect(s.adhkar?.some((a) => a.date === "2026-11-01")).toBe(false);
+    expect("adhkar" in widgetSnapshot(base)).toBe(false);
+  });
+
+  it("gives today's reading against the daily goal, or the pages alone without one", () => {
+    const read = logRead(setPosition(emptyQuranLog(), 10), "2026-10-23", 13);
+    expect(widgetSnapshot({ ...base, quran: read }).days.map((d) => d.read)).toEqual(["3 pages today", "0 pages today"]);
+    expect(widgetSnapshot({ ...base, quran: setDailyGoal(read, 5) }).days[0].read).toBe("3 of 5 pages today");
+    expect(readLine(logRead(emptyQuranLog(), "2026-10-23", 1), "2026-10-23")).toBe("1 page today");
+    // A goal of one page reads as one page.
+    expect(readLine(setDailyGoal(emptyQuranLog(), 1), "2026-10-23")).toBe("0 of 1 page today");
+  });
+});
+
+describe("the meetings the agenda widget is given", () => {
+  const base = { days, now: NOW, tz: "Asia/Dubai", today: "2026-10-23", quran: emptyQuranLog(), page: 1, plan: null };
+  const meeting = (iso: string, minutes: number, title: string, allDay = false) => {
+    const start = Date.parse(iso);
+    return { start, end: start + minutes * 60_000, allDay, title };
+  };
+  const events = [
+    meeting("2026-10-25T05:00:00Z", 30, "Three days out"),
+    meeting("2026-10-24T05:00:00Z", 60, "Tomorrow at nine"),
+    meeting("2026-10-23T11:00:00Z", 60, "Study circle"),
+    meeting("2026-10-23T06:00:00Z", 30, "Over already"),
+    meeting("2026-10-23T09:30:00Z", 60, "Under way now"),
+    meeting("2026-10-23T00:00:00Z", 1440, "A whole day", true),
+  ];
+
+  it("lists today's and tomorrow's still to end, soonest first, with the prayers around each", () => {
+    const s = widgetSnapshot({ ...base, agenda: { calendar: true, events } });
+    expect(s.calendar).toBe(true);
+    expect(s.meetings?.map((m) => m.title)).toEqual(["Under way now", "Study circle", "Tomorrow at nine"]);
+    expect(s.meetings?.[1]).toMatchObject({ date: "2026-10-23", time: "15:00", before: "Jumu'ah 12:06", after: "Asr 15:22" });
+    expect(s.meetings?.[2]).toMatchObject({ date: "2026-10-24", time: "09:00", before: "Fajr 05:04", after: "Dhuhr 12:06" });
+  });
+
+  it("cleans and cuts what a calendar sent, and keeps at most eight", () => {
+    const many = Array.from({ length: 12 }, (_, i) => meeting(`2026-10-23T1${i % 10}:00:00Z`, 30 + i, `M${i}`));
+    expect(widgetSnapshot({ ...base, agenda: { calendar: true, events: many } }).meetings).toHaveLength(8);
+    // A right-to-left override (built from its code point: typed as an escape it could turn into the character itself).
+    const override = String.fromCodePoint(0x202e);
+    const odd = [meeting("2026-10-23T12:00:00Z", 30, `${override}Line one\nline two${"x".repeat(100)}`), meeting("2026-10-23T13:00:00Z", 30, " ")];
+    const [first, second] = widgetSnapshot({ ...base, agenda: { calendar: true, events: odd } }).meetings ?? [];
+    expect(first.title.startsWith("Line one line two")).toBe(true);
+    expect(Array.from(first.title).length).toBeLessThanOrEqual(60);
+    expect(second.title).toBe("Untitled");
+  });
+
+  it("says when no calendar is connected, and sends no agenda when none was given", () => {
+    expect(widgetSnapshot({ ...base, agenda: { calendar: false, events: [] } })).toMatchObject({ calendar: false, meetings: [] });
+    expect("meetings" in widgetSnapshot(base) || "calendar" in widgetSnapshot(base)).toBe(false);
+  });
+});
+
+describe("a place the app only guessed", () => {
+  const guessed = widgetSnapshot({ days, now: NOW, tz: "Asia/Dubai", today: "2026-10-23", quran: emptyQuranLog(), page: 5,
+    plan: null, placeSet: false, adhkar: emptyAdhkarLog(), dhikr: { key: "dhuhr|2026-10-23|tasbih", name: "Tasbih", n: 1, of: 100 },
+    agenda: { calendar: true, events: [{ start: Date.parse("2026-10-23T11:00:00Z"), end: Date.parse("2026-10-23T12:00:00Z"), allDay: false, title: "Circle" }] } });
+
+  it("gives the widgets no prayer, no adhkar and no dhikr, and says the place is not set", () => {
+    expect(guessed.place).toBe("unset");
+    expect(guessed.prayers).toEqual([]);
+    expect("prayerDays" in guessed || "adhkar" in guessed || "dhikr" in guessed).toBe(false);
+  });
+
+  it("keeps what does not come from the prayer times: the Quran lines and the meetings, without prayers around them", () => {
+    expect(guessed.days[0]).toMatchObject({ quran: "Page 5 of 604", read: "0 pages today" });
+    expect(guessed.meetings).toEqual([{ title: "Circle", date: "2026-10-23", time: "15:00", start: Date.parse("2026-10-23T11:00:00Z"),
+      end: Date.parse("2026-10-23T12:00:00Z") }]);
+  });
+
+  it("never marks a place that is set", () => {
+    expect("place" in widgetSnapshot({ days, now: NOW, tz: "Asia/Dubai", today: "2026-10-23", quran: emptyQuranLog(), page: 1,
+      plan: null, placeSet: true })).toBe(false);
   });
 });

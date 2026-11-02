@@ -20,6 +20,8 @@ Change the app id `app.awqat` everywhere it is written, or parts stop working qu
 - `capacitor.config.ts` (`appId`), `android/app/build.gradle` (`namespace`, `applicationId`) and the Java package
   folder `android/app/src/main/java/app/awqat` with its `package` lines and `proguard-rules.pro`.
 - `android/app/src/main/res/values/strings.xml` (`package_name`, `custom_url_scheme`).
+- `android/app/src/main/res/xml/shortcuts.xml` (`targetPackage`, and `targetClass` if the Java package moves), or the
+  icon's long-press shortcuts open nothing.
 - `src/books/coverFiles.ts` (`OWN_FOLDER`), or the camera's temporary photos are never cleared on Android.
 - In Xcode: both targets' bundle ids, your team, and the App Group `group.app.awqat` in both `.entitlements` files and
   `ios/App/PersonalOSWidgets/Shared/SharedStore.swift`.

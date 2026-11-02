@@ -12,7 +12,7 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "update", returnType: CAPPluginReturnPromise)
     ]
 
-    /// About 60 prayers and two days of lines come to a few kilobytes; past this it is not a snapshot.
+    /// About 60 prayers, 12 prayer days, the adhkar and 8 meetings come to some 15 KB; past this it is not a snapshot.
     private static let snapshotMax = 100_000
 
     @objc func update(_ call: CAPPluginCall) {

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The prayer day, 4 x 2: the Hijri date, then the five prayers side by side (the one under way in the accent, set in
+     code), then the iqama to come and the countdown to the next prayer. Only views RemoteViews allows (LinearLayout,
+     TextView, Chronometer). The prayers sit in boxes of fixed height whose text sizes itself down to fit (autoSize), so
+     a larger font never cuts a time in half; the system serif, as the launcher draws only system fonts. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/prayer_day_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="10dp">
+
+    <TextView
+        android:id="@+id/prayer_day_hijri"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:letterSpacing="0.12"
+        android:singleLine="true"
+        android:text="@string/prayer_day_label"
+        android:textColor="#ADECE6D8"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <!-- "Set your place", or open the app once; gone while the day shows. -->
+    <TextView
+        android:id="@+id/prayer_day_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:fontFamily="serif"
+        android:maxLines="2"
+        android:textColor="#ECE6D8"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/prayer_day_grid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/prayer_day_col0"
+            style="@style/PrayerDayColumn">
+
+            <TextView
+                android:id="@+id/prayer_day_name0"
+                style="@style/PrayerDayName"
+                android:text="Fajr" />
+
+            <TextView
+                android:id="@+id/prayer_day_time0"
+                style="@style/PrayerDayTime"
+                android:text="05:04" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/prayer_day_col1"
+            style="@style/PrayerDayColumn">
+
+            <TextView
+                android:id="@+id/prayer_day_name1"
+                style="@style/PrayerDayName"
+                android:text="Dhuhr" />
+
+            <TextView
+                android:id="@+id/prayer_day_time1"
+                style="@style/PrayerDayTime"
+                android:text="12:06" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/prayer_day_col2"
+            style="@style/PrayerDayColumn">
+
+            <TextView
+                android:id="@+id/prayer_day_name2"
+                style="@style/PrayerDayName"
+                android:text="Asr" />
+
+            <TextView
+                android:id="@+id/prayer_day_time2"
+                style="@style/PrayerDayTime"
+                android:text="15:22" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/prayer_day_col3"
+            style="@style/PrayerDayColumn">
+
+            <TextView
+                android:id="@+id/prayer_day_name3"
+                style="@style/PrayerDayName"
+                android:text="Maghrib" />
+
+            <TextView
+                android:id="@+id/prayer_day_time3"
+                style="@style/PrayerDayTime"
+                android:text="17:50" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/prayer_day_col4"
+            style="@style/PrayerDayColumn">
+
+            <TextView
+                android:id="@+id/prayer_day_name4"
+                style="@style/PrayerDayName"
+                android:text="Isha" />
+
+            <TextView
+                android:id="@+id/prayer_day_time4"
+                style="@style/PrayerDayTime"
+                android:text="19:04" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/prayer_day_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Its box sizes the text down to fit, so a larger font never cuts the iqama's time off the end. -->
+        <TextView
+            android:id="@+id/prayer_day_iqama"
+            android:layout_width="0dp"
+            android:layout_height="18dp"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="12sp"
+            android:autoSizeMinTextSize="7sp"
+            android:autoSizeStepGranularity="1sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:textColor="#ADECE6D8"
+            android:textSize="12sp" />
+
+        <!-- Ticks by itself in the launcher: a system timer with no updates from the app. -->
+        <Chronometer
+            android:id="@+id/prayer_day_countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:singleLine="true"
+            android:textColor="#E2CC9A"
+            android:textSize="13sp" />
+    </LinearLayout>
+</LinearLayout>

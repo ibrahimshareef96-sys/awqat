@@ -32,8 +32,8 @@ vi.mock("../src/store.ts", () => ({ KEYS: { settings: "settings" }, write: vi.fn
 vi.mock("@capacitor/browser", () => ({ Browser: { open: vi.fn() } }));
 
 import { hooks, state } from "../src/app/state.ts";
-import { TALK_TEXT, WORKLETS, endTalk, openTalk, pauseTalk, signOutOfTalk, startAgain, stopTalk, talkSignIn,
-  talkSignal, toggleMute } from "../src/talk/talk.ts";
+import { TALK_TEXT, WORKLETS, endTalk, openTalk, pauseTalk, readyTalk, signOutOfTalk, startAgain, stopTalk, talkSignIn,
+  talkSignal, talkUnderWay, toggleMute } from "../src/talk/talk.ts";
 import { QUIET, SILENT } from "../src/talk/signal.ts";
 
 const WORKER = "https://os.example.com";
@@ -164,6 +164,41 @@ describe("signing in once", () => {
     expect(state.talk.phase).toBe("signin");
     expect(mocks.startTalk).not.toHaveBeenCalled();
     expect(mocks.signIn).not.toHaveBeenCalled();
+  });
+});
+
+describe("Talk opened by a link (a widget, a shortcut, Siri)", () => {
+  it("waits for the Talk button: no microphone, no talk, until it is tapped", async () => {
+    state.talk = { ...state.talk, message: TALK_TEXT.ended, caption: "You: the last words" };
+    readyTalk();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(state.talk).toMatchObject({ phase: "idle", message: TALK_TEXT.ready, caption: "" });
+    expect(mocks.askMicrophone).not.toHaveBeenCalled();
+    expect(mocks.startTalk).not.toHaveBeenCalled();
+    expect(mocks.startSession).not.toHaveBeenCalled();
+    await startAgain();
+    expect(mocks.askMicrophone).toHaveBeenCalledTimes(1);
+    expect(mocks.startSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a sign-in form or a talk already going as it is", async () => {
+    state.talk = { ...state.talk, phase: "signin", message: "Sign in once." };
+    readyTalk();
+    expect(state.talk).toMatchObject({ phase: "signin", message: "Sign in once." });
+    state.talk = { ...state.talk, phase: "idle", message: "" };
+    await openTalk();
+    const going = state.talk.phase;
+    readyTalk();
+    expect(state.talk.phase).toBe(going);
+    expect(mocks.startSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("says when a talk is under way, so no link can end it", async () => {
+    expect(talkUnderWay()).toBe(false);
+    await openTalk();
+    expect(talkUnderWay()).toBe(true);
+    await stopTalk();
+    expect(talkUnderWay()).toBe(false);
   });
 });
 

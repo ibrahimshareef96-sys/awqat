@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The adhkar, 2 x 1: the morning and the evening side by side, each with its state (said, open now, or later). No
+     vertical padding, so it fits one row; each state's box sizes its text down to fit a larger font. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/adhkar_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp">
+
+    <!-- "Set your place", or open the app once; gone while the two sets show. -->
+    <TextView
+        android:id="@+id/adhkar_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:fontFamily="serif"
+        android:maxLines="2"
+        android:textColor="#ECE6D8"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/adhkar_sets"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/adhkar_morning"
+            style="@style/AdhkarSet">
+
+            <TextView
+                style="@style/AdhkarName"
+                android:text="@string/adhkar_morning" />
+
+            <TextView
+                android:id="@+id/adhkar_morning_state"
+                style="@style/AdhkarState"
+                android:text="@string/adhkar_said" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/adhkar_evening"
+            style="@style/AdhkarSet"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                style="@style/AdhkarName"
+                android:text="@string/adhkar_evening" />
+
+            <TextView
+                android:id="@+id/adhkar_evening_state"
+                style="@style/AdhkarState"
+                android:text="@string/adhkar_later" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

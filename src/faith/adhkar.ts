@@ -208,6 +208,10 @@ export function islamicMidnight(day: DayTimes, next: DayTimes): Date {
 }
 
 const utcNoon = (key: string): number => Date.parse(`${key}T12:00:00Z`);
+
+/** `next` is the very next calendar day after `day`: what a day's evening (or its Isha) needs to know its end. */
+export const isNextDay = (day: DayTimes, next: DayTimes | undefined): next is DayTimes =>
+  next !== undefined && utcNoon(next.date) - utcNoon(day.date) === DAY_MS;
 const inside = (now: Date, start: Date, end: Date): boolean =>
   now.getTime() >= start.getTime() && now.getTime() < end.getTime();
 
@@ -220,7 +224,7 @@ export function adhkarWindow(days: readonly DayTimes[], now: Date): AdhkarWindow
     }
     const next = days[i + 1];
     // The evening's end needs the next day's Fajr, so the next day must be the very next one.
-    if (!next || utcNoon(next.date) - utcNoon(day.date) !== DAY_MS) continue;
+    if (!isNextDay(day, next)) continue;
     const end = islamicMidnight(day, next);
     if (inside(now, day.asr, end)) {
       return { session: "evening", date: day.date, start: day.asr, end, bestBefore: day.maghrib };

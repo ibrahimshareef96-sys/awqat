@@ -35,6 +35,7 @@ import { weatherFor, type Weather } from "./weather.ts";
 import { markTalk, signIn, signOut, startTalk, type Started } from "./worker.ts";
 
 export const TALK_TEXT = {
+  ready: "Tap Talk to start.",
   connecting: "Connecting.",
   listening: "Listening.",
   speaking: "Speaking.",
@@ -319,6 +320,18 @@ export async function openTalk(): Promise<void> {
   }
   await begin(worker, session);
 }
+
+/**
+ * The Talk sheet opened by a link (a widget, an app shortcut, the Quick Settings tile, Siri): nothing starts until its
+ * Talk button is tapped, since any app can send a link. A sign-in form or a talk already going stays as it is.
+ */
+export function readyTalk(): void {
+  if (attempt === null && phaseNow() !== "signin" && phaseNow() !== "signing") return show("idle", TALK_TEXT.ready, "");
+  hooks.paintTalk();
+}
+
+/** A talk is starting or going: a link from outside never ends it. */
+export const talkUnderWay = (): boolean => attempt !== null;
 
 /** Talk again from the sheet, after a talk ended; a tap just after End (a double tap) is ignored. */
 export async function startAgain(): Promise<void> {

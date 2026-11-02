@@ -52,7 +52,7 @@ import { checkMarks } from "./quran/marks.ts";
 import { checkPlan } from "./quran/murajaah.ts";
 import { murajaahSheet } from "./ui/murajaahView.ts";
 import * as plan from "./app/murajaahActions.ts";
-import { linkTarget, syncWidget, widgetSnapshot } from "./app/widget.ts";
+import { adhkarScreen, linkTarget, syncWidget, widgetSnapshot } from "./app/widget.ts";
 import { pruneKeptPages } from "./quran/mushafFiles.ts";
 import * as mushaf from "./app/mushafActions.ts";
 import * as recite from "./app/reciteActions.ts";
@@ -252,11 +252,12 @@ function syncSurfaces(now = new Date()): void {
   const date = today();
   const live = modes.liveItems(now, planFor(state.body, date));
   // A guessed place's times are Makkah's: no prayer goes on the home screen or the lock screen until a place is set.
-  // The widgets wait for it (until then they say "Open Awqat once"); a timer or a dhikr being counted stays live.
-  if (state.place.source === "default") return syncLive(live.filter((item) => item.id !== "next"));
+  // The widgets say "Set your place" until then; a timer or a dhikr being counted stays live.
+  const placeSet = state.place.source !== "default";
   syncWidget(widgetSnapshot({ days: state.days, now, tz: state.place.tz, today: date, quran: state.quran,
-    page: bookmarkPage(state.mushaf, state.quran), plan: state.murajaah, dhikr: modes.openCount(now), steps: stepsLine(body.bodyModel(now)), live: state.settings.live }));
-  syncLive(live);
+    page: bookmarkPage(state.mushaf, state.quran), plan: state.murajaah, dhikr: modes.openCount(now), steps: stepsLine(body.bodyModel(now)), live: state.settings.live,
+    placeSet, adhkar: state.adhkar, agenda: { calendar: state.calendars.calendars.length > 0, events: state.agenda.events } }));
+  syncLive(placeSet ? live : live.filter((item) => item.id !== "next"));
 }
 
 function render(): void {
@@ -596,13 +597,16 @@ function closeSheet(force = false): void {
   if (softPending) softRender();
 }
 
-function go(target: string): void {
+/** `fromLink`: opened by a widget, a shortcut or Siri, not a tap in the app. */
+function go(target: string, fromLink = false): void {
   if (target === "talk" || target === "add-book") {
     if (state.sheet === target) return;
     state.sheet = target;
     renderOverlay();
-    // The Talk sheet starts a talk at once (or asks for the passphrase first).
-    if (target === "talk") void talk.openTalk();
+    // Tapped in the app, the Talk sheet starts a talk at once (or asks for the passphrase first). Opened by a link, it
+    // waits for its Talk button: a link alone never turns the microphone on.
+    if (target === "talk" && fromLink) talk.readyTalk();
+    else if (target === "talk") void talk.openTalk();
     return;
   }
   if (target === "close") return closeSheet();
@@ -655,10 +659,13 @@ function openLink(url: string): void {
   if (!target || state.sheet === "new-book" || mushaf.noteTyped() || learn.lessonTyped() || modes.duaTyped() || money.moneyTyped()) return;
   // A link to a mode that is not there does nothing at all, a Talk under way included.
   if (target.startsWith("mode:") && !hasMode(target.slice(5))) return;
+  // Talk already open stays as it is, and a talk under way is never ended by a link: any app can send one.
+  if (state.sheet === "talk" && (target === "talk" || talk.talkUnderWay())) return;
   if (state.sheet) closeSheet();
   if (state.sheet) return;
-  // The page line opens the page it shows: the bookmark, where the user stopped reading.
-  go(target === "revise" ? plan.reviseTarget() : target);
+  // The page line opens the page it shows: the bookmark, where the user stopped reading. Adhkar opens the set open now.
+  const now = new Date();
+  go(target === "revise" ? plan.reviseTarget() : target === "adhkar" ? adhkarScreen(freshDays(now), now) : target, true);
 }
 
 /** A mode the app has: one of the fixed ones, or a study of a subject the user has. */
