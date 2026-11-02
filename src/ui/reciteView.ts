@@ -17,6 +17,8 @@ const megabytes = (bytes: number): number => Math.round(bytes / 1_000_000);
 const PROBLEM: Readonly<Record<ReciteProblem, () => string>> = {
   mic: () => "The microphone is off for Awqat. Turn it on in the phone's Settings, Apps, Awqat, Permissions.",
   noMic: () => `This ${deviceWord()} has no microphone Awqat can use.`,
+  audio: () => "The microphone could not be started. Try again.",
+  away: () => "Listening stopped when Awqat went to the background.",
   offline: () => "The download needs the internet. Connect, then try again.",
   download: () => "The download did not finish. Try again.",
   damaged: () => "The downloaded files did not match what was expected, so they were removed. Download them again.",
@@ -78,7 +80,8 @@ function resultBody(flow: FindFlow): string {
   const page = pageOfAyah(best.sura, best.aya);
   const also = same.length ? `<p class="small">The same words also stand at:</p><div class="stack wide">` +
     same.map((m) => openButton(m, placeName(m), false)).join("") + `</div>` : "";
-  return `<p class="eyebrow">FOUND</p><p class="numeral">${esc(placeName(best))}</p><p class="mono small">` +
+  // Focus lands on the place found, so a screen reader says it before the buttons.
+  return `<p class="eyebrow">FOUND</p><p class="numeral" tabindex="-1" data-autofocus>${esc(placeName(best))}</p><p class="mono small">` +
     `${esc(pageLine(best))}</p>${openButton(best, page === null ? "Open it" : `Open page ${page}`, true)}${also}${AGAIN}`;
 }
 
@@ -108,7 +111,7 @@ export function reciteSheet(flow: FindFlow): string {
     case "problem": {
       const retry = flow.problem === "offline" || flow.problem === "download" || flow.problem === "damaged"
         ? `<button type="button" class="pill solid wide" data-action="recite-download">${flow.problem === "damaged" ? "Download" : "Try again"}</button>`
-        : flow.problem === "model" ? AGAIN : "";
+        : flow.problem === "model" || flow.problem === "audio" || flow.problem === "away" || flow.problem === "mic" ? AGAIN : "";
       return sheet(label, `<p class="eyebrow">${flow.then === "memorise" ? "MEMORISE" : "RECITE TO FIND"}</p>` +
         `<p class="text" role="alert">${esc(problemText(flow.problem ?? "model"))}</p>${retry}`);
     }
@@ -134,7 +137,7 @@ function memoriseLine(s: MemoriseSession): string {
   const sum = summarise(s.m);
   const total = s.m.keys.length;
   if (s.phase === "preparing") return "Getting the speech model ready…";
-  if (s.phase === "left") return `You turned away from page ${s.page}.`;
+  if (s.phase === "left") return `You turned away from ${s.pages.length > 1 ? "these pages" : `page ${s.page}`}.`;
   if (sum.done) return "Every word is in. Tap Done to see how it went.";
   if (s.phase === "paused") return `Paused. ${total - sum.hidden} of ${total} words.`;
   return s.working > 0 ? "Listening, and filling in what it heard…" : "Listening. Recite from the top, or from anywhere on the page.";
@@ -145,15 +148,16 @@ export function memoriseBar(s: MemoriseSession): string {
   const status = `<p class="small memorise-line" role="status">${esc(memoriseLine(s))}</p>`;
   if (s.phase === "left") {
     return `<footer class="reader-bottom">${status}<div class="reader-actions"><button type="button" class="pill solid" ` +
-      `data-action="memorise-back">Back to page ${s.page}</button><button type="button" class="pill" data-action="memorise-done">` +
-      `Done</button></div></footer>`;
+      `data-action="memorise-back">Back to ${s.pages.length > 1 ? "the pages" : `page ${s.page}`}</button>` +
+      `<button type="button" class="pill" data-action="memorise-done">Done</button></div></footer>`;
   }
   const listening = s.phase === "listening";
   const ended = summarise(s.m).done;
+  // A toggle keeps one name; whether it is on is said by aria-pressed, not by a changing label.
   return `<footer class="reader-bottom">${status}<div class="reader-actions">` +
     `<button type="button" class="pill" data-action="memorise-peek"${s.phase === "preparing" || ended ? " disabled" : ""}>Peek</button>` +
     `<button type="button" class="round mic-round${listening ? " listening" : ""}" data-action="memorise-toggle" ` +
-    `aria-pressed="${listening}" aria-label="${listening ? "Pause listening" : "Listen"}"${s.phase === "preparing" || ended ? " disabled" : ""}>` +
+    `aria-pressed="${listening}" aria-label="Listen"${s.phase === "preparing" || ended ? " disabled" : ""}>` +
     `${icon(listening ? "pause" : "mic", 20)}</button>` +
     `<button type="button" class="pill solid" data-action="memorise-done">Done</button></div></footer>`;
 }
@@ -164,13 +168,24 @@ const MARK_TEXT: Readonly<Record<Exclude<WordMark, "said">, string>> = {
   peeked: "you peeked",
 };
 
-/** The end of a memorising: how it went, each slip with its line (tap to say it was right), and what to keep. */
-export function memoriseDoneSheet(s: MemoriseSession, lineOf: ReadonlyMap<string, { line: number; word: number }>): string {
+/** Where a word stands: its page (when two are open), line and place on the line. */
+export interface WordPlace {
+  page: number;
+  line: number;
+  word: number;
+}
+
+/**
+ * The end of a memorising: how it went, each slip with its line (tap to say it was right), and what to keep. While a
+ * last stretch is still being heard, Keep waits for it, so no slip is left out of what is kept.
+ */
+export function memoriseDoneSheet(s: MemoriseSession, lineOf: ReadonlyMap<string, WordPlace>): string {
   const sum = summarise(s.m);
+  const both = s.pages.length > 1;
   const rows = s.m.keys.map((key, i) => ({ key, mark: s.m.marks[i] })).filter((r) => r.mark && r.mark !== "said")
     .map(({ key, mark }) => {
       const at = lineOf.get(key);
-      const where = at ? `Line ${at.line}, word ${at.word}` : "A word";
+      const where = !at ? "A word" : `${both ? `Page ${at.page}, line` : "Line"} ${at.line}, word ${at.word}`;
       const clear = mark === "peeked" ? "" : `<button type="button" class="ghost-link" data-action="memorise-clear" ` +
         `data-value="${esc(key)}">It was right</button>`;
       return `<li class="row-item"><span class="col grow"><span>${esc(where)}</span><span class="small">` +
@@ -178,14 +193,17 @@ export function memoriseDoneSheet(s: MemoriseSession, lineOf: ReadonlyMap<string
     });
   const slipsCount = sum.different + sum.skipped + sum.peeked;
   const heard = sum.said + sum.different + sum.skipped + sum.peeked;
-  const head = heard === 0 ? "Nothing was recited on this page yet."
+  const hearing = s.working > 0;
+  const head = heard === 0 ? (hearing ? "Still hearing your last words…" : `Nothing was recited on ${both ? "these pages" : "this page"} yet.`)
     : slipsCount === 0 ? `${sum.said} words from memory, with no slips.`
     : `${sum.said} words from memory. ${slipsCount} place${slipsCount === 1 ? "" : "s"} to look at again.`;
-  const keep = slipsCount ? `<button type="button" class="pill solid wide" data-action="memorise-keep" data-autofocus>` +
-    `Keep ${slipsCount === 1 ? "this" : `these ${slipsCount}`} for revision</button><p class="small">They show on the page and ` +
-    `among your revision's weak pages.</p>` : "";
-  return `<section class="sheet" role="dialog" aria-modal="true" aria-label="Memorise, page ${s.page}"><div class="sheet-inner">` +
-    `<p class="eyebrow">PAGE ${s.page} · MEMORISE</p><p class="text">${esc(head)}</p>` +
+  const keep = slipsCount ? `<button type="button" class="pill solid wide" data-action="memorise-keep" data-autofocus` +
+    `${hearing ? " disabled" : ""}>Keep ${slipsCount === 1 ? "this" : `these ${slipsCount}`} for revision</button>` +
+    `<p class="small"${hearing ? ' role="status"' : ""}>${hearing ? "Still hearing your last words…"
+      : "They show on the page and among your revision's weak pages."}</p>` : "";
+  const pagesName = both ? `pages ${s.pages.join(" and ")}` : `page ${s.page}`;
+  return `<section class="sheet" role="dialog" aria-modal="true" aria-label="Memorise, ${pagesName}"><div class="sheet-inner">` +
+    `<p class="eyebrow">${esc(pagesName.toUpperCase())} · MEMORISE</p><p class="text"${hearing ? ' aria-busy="true"' : ""}>${esc(head)}</p>` +
     (rows.length ? `<ul class="plain wide">${rows.join("")}</ul>` : "") + keep +
     `<p class="small">It can mishear, most of all in a noisy room. Words are checked, not tajweed.</p>` +
     `<p class="sheet-error" data-sheet-error role="alert" hidden></p>` +
@@ -198,19 +216,27 @@ const MARK_CLASS: Readonly<Record<WordMark, string>> = { said: "", different: "m
 const ALL_CLASSES = ["m-hid", "m-diff", "m-skip", "m-peek"];
 
 /**
- * The page being memorised, painted in place over the words already drawn: a hidden word keeps its place on its line
- * (its ink is clear), so nothing moves as words fill in. Its label is hidden from screen readers too.
+ * The pages being memorised, painted in place over the words already drawn: a hidden word keeps its place on its line
+ * (its ink is clear), so nothing moves as words fill in. It is out of the tab order, and its label says only that it
+ * is hidden, so neither a keyboard nor a screen reader gives the word away.
  */
 export function paintMemorise(root: ParentNode, s: MemoriseSession | null): void {
   const reader = root.querySelector<HTMLElement>(".reader");
   reader?.classList.toggle("memorising", s !== null && s.phase !== "left");
   root.querySelectorAll<HTMLElement>(".w.m-hid, .w.m-diff, .w.m-skip, .w.m-peek").forEach((w) => {
     w.classList.remove(...ALL_CLASSES);
-    if (w.dataset.label !== undefined) { w.setAttribute("aria-label", w.dataset.label); delete w.dataset.label; }
+    if (w.dataset.label !== undefined) {
+      if (w.dataset.label) w.setAttribute("aria-label", w.dataset.label);
+      else w.removeAttribute("aria-label");
+      delete w.dataset.label;
+    }
+    w.removeAttribute("tabindex");
   });
   if (!s || s.phase === "left") return;
   const index = new Map(s.m.keys.map((key, i) => [key, i]));
-  root.querySelectorAll<HTMLElement>(`[data-page="${s.page}"] .w[data-word]`).forEach((w) => {
+  const pages = s.pages.map((p) => `[data-page="${Math.trunc(p)}"] .w[data-word]`).join(", ");
+  if (!pages) return;
+  root.querySelectorAll<HTMLElement>(pages).forEach((w) => {
     const i = index.get(w.dataset.word ?? "");
     if (i === undefined) return;
     const mark = s.m.marks[i];
@@ -218,6 +244,7 @@ export function paintMemorise(root: ParentNode, s: MemoriseSession | null): void
       w.classList.add("m-hid");
       w.dataset.label = w.getAttribute("aria-label") ?? "";
       w.setAttribute("aria-label", "Hidden word");
+      w.setAttribute("tabindex", "-1");
     } else if (MARK_CLASS[mark]) w.classList.add(MARK_CLASS[mark]);
   });
 }

@@ -46,7 +46,7 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Awqat never writes to Apple Health. Weights you type stay inside the app.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Talk, if you set it up, sends your voice to ElevenLabs while a talk is on. The microphone is used only then.</string>
+	<string>When you recite to find an ayah or memorise a page, your recitation is heard on this device and never sent anywhere. Talk, if you set it up, sends your voice to ElevenLabs while a talk is on. The microphone is used only at those times.</string>
 	<!-- The location and camera plugins carry code for "always" location and for saving to the photo library, which
 	     the app never calls; Apple refuses a build whose code can ask without a text, so both say what really happens. -->
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

@@ -106,8 +106,14 @@ export function hearChunk(m: Memorise, transcript: string): Memorise {
   const heardWords = [...m.heard];
   // Only words up to the last one actually heard count; the page beyond stays hidden.
   const reached = result.steps.reduce((last, s) => (s.kind === "match" || s.kind === "different" ? Math.max(last, s.at) : last), -1);
+  // The first stretch of a page may start anywhere on it: words before where it began were not skipped, only not
+  // recited yet, so they stay hidden.
+  const fresh = m.marks.every((mark) => mark === null);
+  const began = result.steps.reduce((first, s) => (s.kind === "match" || s.kind === "different" ? Math.min(first, s.at) : first),
+    Number.POSITIVE_INFINITY);
   for (const step of result.steps) {
     if (step.kind === "extra" || step.at > reached) continue;
+    if (fresh && step.at < began) continue;
     // A word already said stays said when the reciter goes over it again.
     if (marks[step.at] === "said" || marks[step.at] === "peeked") continue;
     if (step.kind === "match") marks[step.at] = "said";

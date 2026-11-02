@@ -2,17 +2,23 @@
  * Recitation: recite to find an ayah, and memorise a page. The microphone's sound is cut at the reciter's pauses
  * (recite/audio.ts), heard by the speech worker on this device (recite/engine.ts), and laid on the Quran's text
  * (recite/search.ts) or on the page (recite/align.ts). Nothing leaves the device but the one-time download.
+ *
+ * The microphone is on only while the sheet says "Listening" or the memorise bar shows it listening: every start
+ * takes a number (`run`), so a late start, or a late frame, from an earlier one is let go.
  */
 import { micRefused } from "../talk/mic.ts";
 import { slips, startMemorise, hearChunk, peek, clearSlip } from "../recite/align.ts";
-import { FIND_CUT, MEMORISE_CUT, flush, hearFrame, level, startListening, type Cut, type Listening } from "../recite/audio.ts";
-import { downloadReciteFiles, reciteFiles, removeReciteFiles, type ReciteFiles } from "../recite/assets.ts";
+import { FIND_CUT, MEMORISE_CUT, flush, hearFrame, level, startListening, type Listening } from "../recite/audio.ts";
+import {
+  downloadReciteFiles, markReady, reciteFiles, removeReciteFiles, type DownloadResult, type ReciteFiles,
+} from "../recite/assets.ts";
 import * as engine from "../recite/engine.ts";
 import { startCapture, type Capture } from "../recite/mic.ts";
-import { closedFind, type FindFlow, type ReciteProblem } from "../recite/session.ts";
+import { closedFind, type FindFlow, type MemoriseSession, type ReciteProblem } from "../recite/session.ts";
 import { pageOfAyah } from "../quran/pages.ts";
+import type { MushafWord } from "../quran/mushafPage.ts";
 import { paintFind, paintLit, paintMemorise } from "../ui/reciteView.ts";
-import { hooks, setNotice, state } from "./state.ts";
+import { announce, hooks, setNotice, state } from "./state.ts";
 import * as mushaf from "./mushafActions.ts";
 
 /** Recite to find listens this long at most (tenths of a second). */
@@ -21,9 +27,15 @@ const FIND_LONGEST = 90;
 const LIT_MS = 4000;
 
 let capture: Capture | null = null;
+/** The microphone is being started: on Android its permission prompt pauses the app, which is not going away. */
+let starting = false;
 let heard: Listening = startListening();
-/** Each start of the microphone gets a number, so a late answer from an earlier one is let go. */
+/** Each start of the microphone gets a number, so a late start or frame from an earlier one is let go. */
 let run = 0;
+/** Each fresh start of memorising gets a number, so a stretch heard for an earlier one is let go. */
+let attempts = 0;
+/** The download in progress: a second tap, or the sheet opened again, waits for the same one. */
+let downloading: Promise<DownloadResult> | null = null;
 
 type Ready = Extract<ReciteFiles, { ready: true }>;
 
@@ -36,13 +48,25 @@ function setFind(change: Partial<FindFlow>): void {
   hooks.renderOverlay();
 }
 
+function setMemorise(change: Partial<MemoriseSession>): void {
+  if (!state.memorise) return;
+  state.memorise = { ...state.memorise, ...change };
+  hooks.render();
+}
+
+/** Stops the microphone, and makes any start or frame still on its way from it count for nothing. */
 function stopMic(): void {
   capture?.stop();
   capture = null;
+  starting = false;
   run += 1;
 }
 
-const problemOf = (error: unknown): ReciteProblem => (micRefused(error) ? "mic" : "noMic");
+function problemOf(error: unknown): ReciteProblem {
+  if (micRefused(error)) return "mic";
+  const name = error !== null && typeof error === "object" ? (error as { name?: unknown }).name : "";
+  return name === "NotFoundError" ? "noMic" : "audio";
+}
 
 /** Starts the speech worker on the files; a damaged download is taken off the phone. */
 async function ready(files: Ready): Promise<ReciteProblem | null> {
@@ -52,15 +76,18 @@ async function ready(files: Ready): Promise<ReciteProblem | null> {
     await removeReciteFiles();
     return "damaged";
   }
+  // The files are checked again next time: a model that will not start may be a file damaged since it was checked.
+  await markReady(false);
   return "model";
 }
 
 /** Opens the recite-to-find sheet: straight to listening when the files are here, else the one-time download. */
 export async function openFind(then: FindFlow["then"] = "find"): Promise<void> {
   stopMic();
-  state.recite = { ...closedFind(), then };
+  state.recite = { ...closedFind(), phase: "preparing", then };
   state.sheet = "recite";
   hooks.renderOverlay();
+  if (downloading) return void watchDownload();
   const files = await reciteFiles();
   if (state.sheet !== "recite") return;
   if (!files.ready) return setFind({ phase: "intro" });
@@ -69,7 +96,7 @@ export async function openFind(then: FindFlow["then"] = "find"): Promise<void> {
 
 /** After the files are known to be here: find, or start memorising, as the sheet was opened for. */
 async function carryOn(files: Ready): Promise<void> {
-  setFind({ phase: "preparing" });
+  setFind({ phase: "preparing", problem: null });
   const problem = await ready(files);
   if (state.sheet !== "recite") return;
   if (problem) return setFind({ phase: "problem", problem });
@@ -80,15 +107,28 @@ async function carryOn(files: Ready): Promise<void> {
   await listenFind();
 }
 
-export async function download(): Promise<void> {
-  setFind({ phase: "downloading", progress: 0, problem: null });
-  const result = await downloadReciteFiles((done, total) => {
-    state.recite = { ...state.recite, progress: total ? done / total : 0 };
-    const root = overlay();
-    if (root) paintFind(root, state.recite, 0);
-  });
+export function download(): Promise<void> {
+  if (!downloading) {
+    downloading = downloadReciteFiles((done, total) => {
+      if (state.sheet !== "recite" || phaseNow() !== "downloading") return;
+      state.recite = { ...state.recite, progress: total ? done / total : 0 };
+      const root = overlay();
+      if (root) paintFind(root, state.recite, 0);
+    }).finally(() => { downloading = null; });
+  }
+  return watchDownload();
+}
+
+/** Shows the download going on, and carries on once it has finished. */
+async function watchDownload(): Promise<void> {
+  const running = downloading;
+  if (!running) return;
+  setFind({ phase: "downloading", problem: null });
+  const result = await running;
   if (state.sheet !== "recite") return;
-  if (!result.ok) return setFind({ phase: "problem", problem: result.why === "web" ? "web" : result.why === "offline" ? "offline" : "download" });
+  if (!result.ok) {
+    return setFind({ phase: "problem", problem: result.why === "web" ? "web" : result.why === "offline" ? "offline" : "download" });
+  }
   const files = await reciteFiles();
   if (!files.ready) return setFind({ phase: "problem", problem: "download" });
   await carryOn(files);
@@ -96,10 +136,12 @@ export async function download(): Promise<void> {
 
 async function listenFind(): Promise<void> {
   stopMic();
+  const mine = run;
   heard = startListening();
   setFind({ phase: "listening", result: null, problem: null });
-  const mine = run;
+  announce("Listening. Recite a few words.");
   try {
+    starting = true;
     const started = await startCapture((frame) => {
       if (mine !== run) return;
       const out = hearFrame(heard, frame, FIND_CUT);
@@ -113,17 +155,19 @@ async function listenFind(): Promise<void> {
     capture = started;
   } catch (error) {
     if (mine === run) setFind({ phase: "problem", problem: problemOf(error) });
+  } finally {
+    if (mine === run) starting = false;
   }
 }
 
 /** The reciter tapped Stop: what was heard so far is looked for. */
 export function stopFind(): void {
-  if (state.recite.phase !== "listening") return;
+  if (phaseNow() !== "listening") return;
   void finishFind(flush(heard, FIND_CUT));
 }
 
 async function finishFind(audio: Float32Array | null): Promise<void> {
-  if (state.recite.phase !== "listening") return;
+  if (phaseNow() !== "listening") return;
   stopMic();
   if (!audio) return setFind({ phase: "result", result: { kind: "short" } });
   setFind({ phase: "finding" });
@@ -135,8 +179,10 @@ async function finishFind(audio: Float32Array | null): Promise<void> {
   setFind({ phase: "result", result });
 }
 
+/** Recite again: listens at once when the model is loaded, else loads it first (after a failure, say). */
 export function again(): void {
   if (state.sheet !== "recite") return;
+  if (!engine.isReady()) return void openFind(state.recite.then);
   void listenFind();
 }
 
@@ -156,10 +202,17 @@ export function openFound(value: string): void {
   }, LIT_MS);
 }
 
-/** Memorise this page: its words hidden, then filled in as they are recited. */
+/** The words of every page in view, in reading order, with each word's place; null while a page has not opened. */
+function wordsInView(): { pages: number[]; words: MushafWord[] } | null {
+  const pages = mushaf.pagesInView();
+  const found = pages.map((p) => mushaf.pageWords(p));
+  if (found.some((p) => !p || p.words.length === 0)) return null;
+  return { pages, words: found.flatMap((p) => p!.words) };
+}
+
+/** Memorise the page (or both pages open): their words hidden, then filled in as they are recited. */
 export async function startMemorising(): Promise<void> {
-  const page = mushaf.pageWords(state.mushafPage);
-  if (!page || page.words.length === 0) {
+  if (!wordsInView()) {
     setNotice("This page has not opened yet. Try again once its words are here.");
     return hooks.render();
   }
@@ -169,53 +222,59 @@ export async function startMemorising(): Promise<void> {
 }
 
 async function beginMemorise(files: Ready): Promise<void> {
-  const page = mushaf.pageWords(state.mushafPage);
-  if (!page) return;
-  state.memorise = { page: state.mushafPage, m: startMemorise(page.words), phase: "preparing", working: 0, problem: null };
+  const view = wordsInView();
+  if (!view) return;
+  attempts += 1;
+  const attempt = attempts;
+  state.memorise = { page: state.mushafPage, pages: view.pages, m: startMemorise(view.words), phase: "preparing",
+    working: 0, problem: null, attempt };
   hooks.render();
   const problem = await ready(files);
-  if (!state.memorise) return;
-  if (problem) {
-    state.memorise = { ...state.memorise, problem, phase: "paused" };
-    return hooks.render();
-  }
+  const now = state.memorise;
+  // Only this same start goes on, and only while it still waits: Done, a turn of the page or an end come first.
+  if (!now || now.attempt !== attempt || now.phase !== "preparing") return;
+  if (problem) return setMemorise({ phase: "paused", problem });
   await listenMemorise();
 }
 
-async function heardStretch(audio: Float32Array, page: number): Promise<void> {
-  if (!state.memorise || state.memorise.page !== page) return;
-  state.memorise = { ...state.memorise, working: state.memorise.working + 1 };
-  hooks.render();
+async function heardStretch(audio: Float32Array, attempt: number): Promise<void> {
+  if (!state.memorise || state.memorise.attempt !== attempt) return;
+  setMemorise({ working: state.memorise.working + 1 });
   const text = await engine.hear(audio);
   const now = state.memorise;
-  if (!now || now.page !== page) return;
+  if (!now || now.attempt !== attempt) return;
   state.memorise = { ...now, m: text ? hearChunk(now.m, text) : now.m, working: Math.max(0, now.working - 1) };
   hooks.render();
+  // The summary drawn while this stretch was being heard is brought up to date.
+  if (state.sheet === "memorise-done") hooks.renderOverlay();
 }
 
 async function listenMemorise(): Promise<void> {
   const session = state.memorise;
   if (!session) return;
+  if (state.mushafPage !== session.page) return setMemorise({ phase: "left" });
   stopMic();
-  heard = startListening();
-  state.memorise = { ...session, phase: "listening", problem: null };
-  hooks.render();
   const mine = run;
-  const page = session.page;
-  const cut: Cut = MEMORISE_CUT;
+  heard = startListening();
+  setMemorise({ phase: "listening", problem: null });
+  // The draw above may have found the page turned away (afterReaderDraw stops the microphone): then nothing starts.
+  if (mine !== run || state.memorise?.phase !== "listening") return;
+  const attempt = session.attempt;
   try {
+    starting = true;
     const started = await startCapture((frame) => {
       if (mine !== run) return;
-      const out = hearFrame(heard, frame, cut);
+      const out = hearFrame(heard, frame, MEMORISE_CUT);
       heard = out.state;
-      if (out.stretch) void heardStretch(out.stretch, page);
+      if (out.stretch) void heardStretch(out.stretch, attempt);
     });
     if (mine !== run) return started.stop();
     capture = started;
   } catch (error) {
     if (mine !== run || !state.memorise) return;
-    state.memorise = { ...state.memorise, phase: "paused", problem: problemOf(error) };
-    hooks.render();
+    setMemorise({ phase: "paused", problem: problemOf(error) });
+  } finally {
+    if (mine === run) starting = false;
   }
 }
 
@@ -226,52 +285,72 @@ function pauseMemorise(): void {
   const rest = flush(heard, MEMORISE_CUT);
   stopMic();
   heard = startListening();
-  state.memorise = { ...session, phase: session.phase === "left" ? "left" : "paused" };
-  hooks.render();
-  if (rest) void heardStretch(rest, session.page);
+  setMemorise({ phase: session.phase === "left" ? "left" : "paused" });
+  if (rest) void heardStretch(rest, session.attempt);
 }
 
-export function toggleListening(): void {
+export async function toggleListening(): Promise<void> {
   const session = state.memorise;
   if (!session || session.phase === "preparing") return;
   if (session.phase === "listening") return pauseMemorise();
-  void listenMemorise();
+  // After a model or file failure, the model is loaded again (and the files checked again) before listening.
+  if (!engine.isReady()) {
+    const files = await reciteFiles();
+    if (!files.ready) return openFind("memorise");
+    setMemorise({ phase: "preparing", problem: null });
+    const problem = await ready(files);
+    const now = state.memorise;
+    if (!now || now.attempt !== session.attempt || now.phase !== "preparing") return;
+    if (problem) return setMemorise({ phase: "paused", problem });
+  }
+  await listenMemorise();
 }
 
 export function peekWord(): void {
   if (!state.memorise) return;
-  state.memorise = { ...state.memorise, m: peek(state.memorise.m) };
-  hooks.render();
+  setMemorise({ m: peek(state.memorise.m) });
 }
 
 export function finishMemorising(): void {
-  if (!state.memorise) return;
-  if (state.memorise.phase === "listening") pauseMemorise();
+  const session = state.memorise;
+  if (!session) return;
+  if (session.phase === "listening") pauseMemorise();
+  // Done while the model was still getting ready: it does not start listening under the summary.
+  else if (session.phase === "preparing") setMemorise({ phase: "paused" });
   state.sheet = "memorise-done";
   hooks.renderOverlay();
 }
 
 export function clearWordSlip(key: string): void {
   if (!state.memorise) return;
-  state.memorise = { ...state.memorise, m: clearSlip(state.memorise.m, key) };
-  hooks.render();
+  setMemorise({ m: clearSlip(state.memorise.m, key) });
   hooks.renderOverlay();
 }
 
+/** Keeps the slips and peeks as revision mistakes; the session ends only once they are saved. */
 export async function keepSlips(): Promise<void> {
   const session = state.memorise;
-  if (!session) return;
+  if (!session || session.working > 0) return;
+  stopMic();
   const words = slips(session.m);
-  state.memorise = null;
-  await mushaf.keepMistakes(words, `${words.length} kept for revision.`);
+  const saved = await mushaf.keepMistakes(words, `${words.length} kept for revision.`);
+  if (saved && state.memorise?.attempt === session.attempt) {
+    state.memorise = null;
+    hooks.render();
+  }
 }
 
 export function memoriseAgain(): void {
-  const page = state.memorise ? mushaf.pageWords(state.memorise.page) : null;
-  if (!state.memorise || !page) return;
-  state.memorise = { ...state.memorise, m: startMemorise(page.words), phase: "paused", working: 0, problem: null };
+  const session = state.memorise;
+  if (!session) return;
+  if (state.mushafPage !== session.page) mushaf.turnTo(session.page);
+  const view = wordsInView();
+  if (!view) return;
+  attempts += 1;
+  state.memorise = { ...session, pages: view.pages, m: startMemorise(view.words), phase: "paused", working: 0, problem: null,
+    attempt: attempts };
   hooks.closeSheet(true);
-  void listenMemorise();
+  void toggleListening();
 }
 
 export function endMemorising(): void {
@@ -286,8 +365,7 @@ export function backToPage(): void {
   const session = state.memorise;
   if (!session) return;
   mushaf.turnTo(session.page);
-  state.memorise = { ...session, phase: "paused" };
-  hooks.render();
+  setMemorise({ phase: "paused" });
 }
 
 /**
@@ -312,6 +390,19 @@ export function afterReaderDraw(root: ParentNode): void {
   paintLit(root, state.reciteLit);
 }
 
+/**
+ * The app went to the background: listening stops, and says so (the system may cut the microphone anyway). Android's
+ * microphone prompt pauses the app too: while that is open, listening is left to start once it is answered.
+ */
+export function appAway(android: boolean): void {
+  if (starting && android) return;
+  if (state.sheet === "recite" && phaseNow() === "listening") {
+    stopMic();
+    setFind({ phase: "problem", problem: "away" });
+  }
+  if (state.memorise?.phase === "listening") pauseMemorise();
+}
+
 /** The reader closed: the microphone and the speech model are let go, and a memorising is ended. */
 export function leaveReader(): void {
   stopMic();
@@ -321,6 +412,16 @@ export function leaveReader(): void {
 
 /** The recite sheet closed: the microphone stops (the model stays loaded while the reader is open). */
 export function sheetClosed(): void {
-  if (state.recite.phase === "listening" || state.recite.phase === "finding") stopMic();
+  if (phaseNow() === "listening" || phaseNow() === "finding") stopMic();
   state.recite = closedFind();
+}
+
+/** Settings: takes the recitation download off the phone; it downloads again the next time it is used. */
+export async function removeDownload(): Promise<void> {
+  if (downloading) return setNotice("The recitation download is still going. Try again once it has finished.");
+  stopMic();
+  engine.release();
+  await removeReciteFiles();
+  setNotice("The recitation download is removed. It downloads again the next time you recite.");
+  hooks.render();
 }

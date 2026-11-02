@@ -1,7 +1,7 @@
 // Recite to find, on a made-up text shaped like Tanzil's file: everyday Arabic sentences written for the tests, so no
 // Quran text is ever typed here. Three "surahs" of 3, 4 and 2 lines.
 import { describe, expect, it } from "vitest";
-import { buildIndex, infixDistance, searchRecitation } from "../src/recite/search.ts";
+import { buildIndex, infixDistance, infixMatch, searchRecitation } from "../src/recite/search.ts";
 import { parseTanzil, TANZIL_MAX } from "../src/recite/tanzil.ts";
 
 const AYAS = [3, 4, 2];
@@ -98,5 +98,15 @@ describe("infix distance", () => {
     expect(infixDistance("بيط", "ذهبالىبيتهمسرورا")).toBe(1);
     expect(infixDistance("", "نص")).toBe(0);
     expect(infixDistance("نص", "")).toBe(2);
+  });
+
+  it("says where the closest stretch begins and ends", () => {
+    expect(infixMatch("بيت", "ذهبالىبيتهمسرورا")).toEqual({ distance: 0, start: 6, end: 9 });
+  });
+
+  it("takes the stretch that begins later when two cost the same, so it does not reach back", () => {
+    // A stray first letter could be a wrong letter in the text before, or a letter heard that was never there:
+    // the second keeps the match inside the stretch that was really said.
+    expect(infixMatch("سبيت", "ذهبالىبيتهمسرورا")).toEqual({ distance: 1, start: 6, end: 9 });
   });
 });

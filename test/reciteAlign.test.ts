@@ -59,6 +59,16 @@ describe("memorise", () => {
     expect(marks(m)).toBe(".".repeat(9) + "sssss");
   });
 
+  it("leaves the first words hidden, not skipped, when the first stretch starts a word or two in", () => {
+    const m = hearChunk(page(), "الرجل الى السوق في الصباح");
+    expect(marks(m)).toBe(".sssss" + ".".repeat(8));
+  });
+
+  it("still marks a skip once the page is under way", () => {
+    const m = hearChunk(hearChunk(page(), "ذهب الرجل"), "السوق في الصباح");
+    expect(marks(m)).toBe("ssksss" + ".".repeat(8));
+  });
+
   it("keeps a word said when the reciter goes back over it", () => {
     const first = hearChunk(page(), "ذهب الرجل الى السوق في الصباح");
     const again = hearChunk(first, "الى السوق في الصباح واشترى");

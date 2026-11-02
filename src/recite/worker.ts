@@ -26,23 +26,31 @@ async function sha256(buffer: ArrayBuffer): Promise<string> {
   return Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** True when every model file is the one pinned, byte for byte. */
-async function filesMatch(base: string): Promise<boolean> {
+/**
+ * "match" when every model file is the one pinned, byte for byte; "damaged" when one is missing or differs (it is then
+ * deleted and downloaded again); "unread" when a file could not be read just now (low memory, say): tried again later.
+ */
+async function checkFiles(base: string): Promise<"match" | "damaged" | "unread"> {
   for (const file of MODEL_FILES) {
+    let buffer: ArrayBuffer;
     try {
       const response = await fetch(`${base}${MODEL_ID}/${file.path}`);
-      if (!response.ok) return false;
-      const buffer = await response.arrayBuffer();
-      if (buffer.byteLength !== file.size || await sha256(buffer) !== file.sha256) return false;
+      if (response.status === 404) return "damaged";
+      if (!response.ok) return "unread";
+      buffer = await response.arrayBuffer();
     } catch {
-      return false;
+      return "unread";
     }
+    if (buffer.byteLength !== file.size || await sha256(buffer) !== file.sha256) return "damaged";
   }
-  return true;
+  return "match";
 }
 
 async function load(message: Extract<ToWorker, { type: "load" }>): Promise<void> {
-  if (!message.checked && !(await filesMatch(message.base))) return post({ type: "failed", why: "damaged" });
+  if (!message.checked) {
+    const checked = await checkFiles(message.base);
+    if (checked !== "match") return post({ type: "failed", why: checked === "damaged" ? "damaged" : "model" });
+  }
   try {
     const text = await (await fetch(message.tanzil)).text();
     const read = parseTanzil(text);
@@ -86,10 +94,16 @@ async function handle(message: ToWorker): Promise<void> {
     }
   }
   if (!index) return post({ type: "error", id: message.id });
-  post({ type: "found", id: message.id, result: searchRecitation(index, message.text.slice(0, 2000)) });
+  try {
+    post({ type: "found", id: message.id, result: searchRecitation(index, message.text.slice(0, 2000)) });
+  } catch {
+    post({ type: "error", id: message.id });
+  }
 }
 
 self.onmessage = (event: MessageEvent<ToWorker>) => {
   const message = event.data;
-  queue = queue.then(() => handle(message)).catch(() => undefined);
+  // Whatever goes wrong, the page gets an answer, so nothing it waits on hangs.
+  queue = queue.then(() => handle(message)).catch(() =>
+    post(message.type === "load" ? { type: "failed", why: "model" } : { type: "error", id: message.id }));
 };

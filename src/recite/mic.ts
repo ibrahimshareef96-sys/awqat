@@ -12,7 +12,14 @@ export async function startCapture(onFrame: (frame: Float32Array) => void): Prom
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
   });
-  const context = new AudioContext();
+  let context: AudioContext;
+  try {
+    context = new AudioContext();
+  } catch (error) {
+    // No sound engine to hear it with: the microphone opened above is closed again, so it does not stay on.
+    for (const track of stream.getTracks()) track.stop();
+    throw error;
+  }
   const stopAll = (): void => {
     for (const track of stream.getTracks()) track.stop();
     void context.close().catch(() => undefined);

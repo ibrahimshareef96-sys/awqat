@@ -84,9 +84,14 @@ export function infixMatch(query: string, text: string): { distance: number; sta
       const diagonal = previous[j - 1] + (q[i - 1] === t[j - 1] ? 0 : 1);
       const up = previous[j] + 1;
       const left = row[j - 1] + 1;
-      if (diagonal <= up && diagonal <= left) { row[j] = diagonal; rowStart[j] = previousStart[j - 1]; }
-      else if (up <= left) { row[j] = up; rowStart[j] = previousStart[j]; }
-      else { row[j] = left; rowStart[j] = rowStart[j - 1]; }
+      // On a tie, the stretch that began later wins: the tightest stretch, so a span does not reach back into the
+      // ayah before it (which would then be named as where the recitation began).
+      let cost = diagonal;
+      let from = previousStart[j - 1];
+      if (up < cost || (up === cost && previousStart[j] > from)) { cost = up; from = previousStart[j]; }
+      if (left < cost || (left === cost && rowStart[j - 1] > from)) { cost = left; from = rowStart[j - 1]; }
+      row[j] = cost;
+      rowStart[j] = from;
     }
     previous = row;
     previousStart = rowStart;

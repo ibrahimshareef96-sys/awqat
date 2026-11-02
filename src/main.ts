@@ -29,7 +29,7 @@ import { checkLibrary } from "./books/library.ts";
 import { checkSync, syncMessage } from "./books/sync.ts";
 import { prepareFolders } from "./books/media.ts";
 import { KEYS, keepAside, read, type ReadResult } from "./store.ts";
-import { isNative, locate, notifyPermission, openExactAlarmSettings } from "./device.ts";
+import { isNative, locate, notifyPermission, openExactAlarmSettings, platform } from "./device.ts";
 import { setSky } from "./ui/sky.ts";
 import { chrome, faithView, header, homeView, noticeLine, settingsView, type ViewModel } from "./ui/views.ts";
 import { copyDraft, feedOfScreen, isFeedKind, keepFeedsToSession, refreshFeed } from "./app/feedActions.ts";
@@ -56,7 +56,7 @@ import { linkTarget, syncWidget, widgetSnapshot } from "./app/widget.ts";
 import { pruneKeptPages } from "./quran/mushafFiles.ts";
 import * as mushaf from "./app/mushafActions.ts";
 import * as recite from "./app/reciteActions.ts";
-import { memoriseDoneSheet, reciteSheet } from "./ui/reciteView.ts";
+import { memoriseDoneSheet, reciteSheet, type WordPlace } from "./ui/reciteView.ts";
 import { bookmarkPage } from "./quran/bookmark.ts";
 import { bookMoving, handsMoving, listenForHands, pagerReplaced, resetHands } from "./app/hands.ts";
 import { barsMoved, forgetBookPage, lastTurn, listenForBook, resetBook, turnBook } from "./ui/pageTurn.ts";
@@ -424,7 +424,13 @@ function duaSheetFor(mode: string | null): string {
 function reciteSheetHtml(kind: "recite" | "memorise-done"): string {
   if (kind === "recite") return reciteSheet(state.recite);
   const session = state.memorise;
-  return session ? memoriseDoneSheet(session, mushaf.pageWords(session.page)?.at ?? new Map()) : "";
+  if (!session) return "";
+  // Every page memorised, so a slip on the second page of a spread is placed on its own page.
+  const places = new Map<string, WordPlace>();
+  for (const page of session.pages) {
+    mushaf.pageWords(page)?.at.forEach((at, key) => places.set(key, { page, ...at }));
+  }
+  return memoriseDoneSheet(session, places);
 }
 
 /** A recitation sheet drawn again in place, its focus kept on the same control where it is still there. */
@@ -817,7 +823,8 @@ function act(action: string, value: string): void {
     case "recite-stop": return recite.stopFind();
     case "recite-again": return recite.again();
     case "memorise-start": return void recite.startMemorising();
-    case "memorise-toggle": return recite.toggleListening();
+    case "memorise-toggle": return void recite.toggleListening();
+    case "recite-remove": return void recite.removeDownload();
     case "memorise-peek": return recite.peekWord();
     case "memorise-done": return recite.finishMemorising();
     case "memorise-clear": return recite.clearWordSlip(value);
@@ -1192,7 +1199,10 @@ async function boot(): Promise<void> {
     resetHands();
     resetHold();
     resetBook();
-    if (document.hidden) flushFields();
+    if (document.hidden) {
+      flushFields();
+      recite.appAway(platform() === "android");
+    }
   });
   setInterval(tick, TICK_MS);
   if (isNative()) {
@@ -1202,6 +1212,8 @@ async function boot(): Promise<void> {
       // A talk does not go on with the app out of sight (the system would cut its microphone anyway), except through
       // Android's microphone prompt, which pauses the app itself.
       void talk.pauseTalk();
+      // Recitation's microphone stops the same way (recite/appAway leaves Android's prompt alone).
+      recite.appAway(platform() === "android");
     });
     void App.addListener("backButton", onBack);
   }

@@ -97,10 +97,10 @@ Installed from npm; each package ships its own licence text in `node_modules`.
 | transformers.js (`@huggingface/transformers`), which runs the speech model | Apache-2.0 |
 | ONNX Runtime Web (`onnxruntime-web`), whose WebAssembly build is copied into the app as `recite-runtime/` by `vite.config.ts` | MIT |
 | `@huggingface/jinja`, `@huggingface/tokenizers`, brought in by transformers.js | MIT / Apache-2.0 |
+| Vite, Vitest, TypeScript, happy-dom (development only) | MIT / Apache-2.0 |
 
 `onnxruntime-node` and `sharp`, which transformers.js names for Node only, are replaced by the empty stand-ins in
 `stubs/` (package.json `overrides`), so their native binaries are never installed.
-| Vite, Vitest, TypeScript, happy-dom (development only) | MIT / Apache-2.0 |
 
 The MPL-2.0 libraries are used unmodified; their source is available from npm and their own repositories.
 

@@ -28,6 +28,7 @@ import type { Learn } from "../learn/learn.ts";
 import type { Intention } from "../review/muhasabah.ts";
 import { homeWeekCard, reviewReminderFields } from "./reviewView.ts";
 import { BUILT_IN_WORKER } from "../voice.ts";
+import { DOWNLOAD_BYTES } from "../recite/assets.ts";
 
 export interface ViewModel {
   now: Date;
@@ -325,6 +326,16 @@ function voiceCard(v: ViewModel): string {
     `${talk}${shared}</section>`;
 }
 
+/** Recitation's one-time download, and how to take it off the device again. Only the installed app downloads it. */
+function reciteCard(): string {
+  if (platform() === "web") return "";
+  return `<section class="card"><h2 class="label">RECITATION</h2><p class="small">Recite to find and Memorise use a ` +
+    `speech model and the Quran text from the Tanzil Project, about ${Math.round(DOWNLOAD_BYTES / 1_000_000)} MB, ` +
+    `downloaded the first time you recite. What you recite is heard on this ${deviceWord()} and never sent anywhere.</p>` +
+    `<div class="row-buttons"><button type="button" class="pill" data-action="recite-remove">Remove the download</button>` +
+    `</div></section>`;
+}
+
 function statusLine(v: ViewModel): string {
   if (v.notify === "unavailable") return "Reminders work in the installed app.";
   if (v.place.source === "default") return "Reminders start once your place is set.";
@@ -374,11 +385,13 @@ export function settingsView(v: ViewModel, turn?: TurnStats): string {
     `<p class="small">${esc(statusLine(v))}</p><div class="row-buttons">` +
     (v.notify === "prompt" || v.notify === "denied" ? `<button type="button" class="pill" data-action="notify"${busy(v)}>Allow notifications</button>` : "") +
     (v.exact === "denied" ? `<button type="button" class="pill" data-action="exact"${busy(v)}>Exact times</button>` : "") +
-    `</div></section>${calendarsCard(v.agenda)}${voiceCard(v)}<p class="foot">Awqat 0.19, open source (MIT) · ` +
+    `</div></section>${calendarsCard(v.agenda)}${voiceCard(v)}${reciteCard()}<p class="foot">Awqat 0.19, open source (MIT) · ` +
     `prayer times by adhan-js (MIT) · Hijri date: Umm al-Qura · adhkar: Hisn al-Muslim, from Seen Arabic's set (MIT) · ` +
     `du'a after the salam: Hisn al-Muslim, from hisnmuslim.com · Quran fonts provided by Quran Foundation, King Fahd ` +
     `Complex script · Quran metadata: Tanzil Project (tanzil.net) · type: Instrument Serif (OFL) · weather: Open-Meteo ` +
     `(CC BY 4.0) · covers and book data: Open Library · calendars read with ical.js (MPL-2.0) · health data through ` +
-    `Capgo's Capacitor Health (MPL-2.0) · voice through ElevenLabs' client (MIT) and LiveKit (Apache-2.0)</p>` +
+    `Capgo's Capacitor Health (MPL-2.0) · voice through ElevenLabs' client (MIT) and LiveKit (Apache-2.0) · recitation ` +
+    `heard by Tarteel AI's whisper-tiny-ar-quran (Apache-2.0) through transformers.js (Apache-2.0) and ONNX Runtime ` +
+    `(MIT), placed on the Quran text of the Tanzil Project (tanzil.net)</p>` +
     `</main>`;
 }

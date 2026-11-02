@@ -143,8 +143,14 @@ function keepGuestPlace(page: number): void {
   void save(KEYS.modes, state.modes);
 }
 
-/** The bars are hidden now: as the user left them, unless a notice is showing (then they stay up so it is read). */
-export const barsHidden = (): boolean => state.mushafBarsHidden && !state.notice;
+/**
+ * The bars are hidden now: as the user left them, unless a notice is showing (then they stay up so it is read), or a
+ * page is being memorised (its bar holds the microphone and Done).
+ */
+export const barsHidden = (): boolean => state.mushafBarsHidden && !state.notice && !state.memorise;
+
+/** The pages in view now: the open page, or both pages of the open spread. */
+export const pagesInView = (): number[] => inView(state.mushafPage);
 
 /**
  * The user's bookmark arrived from another device (its time changed in this sync) while the reader waits on the page it
@@ -257,19 +263,23 @@ export function sheetError(text: string): void {
  * `savesNote`: the change is the sheet's own note, so the sheet may close with it. A mark or clear made while a note
  * is half typed leaves the sheet open, so the note is not lost.
  */
-async function commit(change: (marks: MushafMarks) => MushafMarks, said: string, savesNote: boolean): Promise<void> {
-  if (saving) return;
+async function commit(change: (marks: MushafMarks) => MushafMarks, said: string, savesNote: boolean): Promise<boolean> {
+  if (saving) return false;
   saving = true;
   try {
     const before = state.mushaf;
     const next = change(before);
-    if (!(await save(KEYS.mushaf, next))) return sheetError(state.notice || MESSAGES.unsaved);
+    if (!(await save(KEYS.mushaf, next))) {
+      sheetError(state.notice || MESSAGES.unsaved);
+      return false;
+    }
     state.mushaf = state.mushaf === before ? next : change(state.mushaf);
     if (state.mushaf !== next) void save(KEYS.mushaf, state.mushaf);
     hooks.render();
     announce(said);
     if (savesNote || !noteTyped()) hooks.closeSheet(true);
     else keptOpen(said);
+    return true;
   } finally {
     saving = false;
   }
@@ -297,8 +307,11 @@ export function pageWords(page: number): { words: MushafWord[]; at: Map<string, 
   return { words, at };
 }
 
-/** Memorising's slips and peeks, kept as revision mistakes on their words (the sheet that asked for it then closes). */
-export function keepMistakes(words: readonly string[], said: string): Promise<void> {
+/**
+ * Memorising's slips and peeks, kept as revision mistakes on their words (the sheet that asked for it then closes).
+ * True once they are saved; false when the save failed or another was still going, so nothing is let go.
+ */
+export function keepMistakes(words: readonly string[], said: string): Promise<boolean> {
   const day = today();
   return commit((m) => words.reduce((marks, word) => markMistake(marks, word, day), m), said, true);
 }

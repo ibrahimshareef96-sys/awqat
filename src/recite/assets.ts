@@ -101,7 +101,10 @@ export async function downloadReciteFiles(progress: (done: number, total: number
       listener = await Filesystem.addListener("progress", (p) => {
         if (p.url === modelFileUrl(file)) progress(before + Math.min(file.size, p.bytes), DOWNLOAD_BYTES);
       });
-      await Filesystem.downloadFile({ url: modelFileUrl(file), path, directory: mushafDirectory(), progress: true, recursive: true });
+      // A stalled connection gives up instead of holding the sheet on "Downloading" for ever. (Hugging Face answers
+      // from its file store by a redirect, so redirects are followed here.)
+      await Filesystem.downloadFile({ url: modelFileUrl(file), path, directory: mushafDirectory(), progress: true, recursive: true,
+        connectTimeout: 15000, readTimeout: 60000 });
       await listener.remove();
       listener = null;
       if (await sizeOf(path) !== file.size) {
@@ -119,9 +122,10 @@ export async function downloadReciteFiles(progress: (done: number, total: number
     await markReady(false);
     return { ok: true };
   } catch {
-    return { ok: false, why: "offline" };
+    // Only a phone that says it is offline is told to connect; anything else is a download that did not finish.
+    return { ok: false, why: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "failed" };
   } finally {
-    await listener?.remove();
+    await listener?.remove().catch(() => undefined);
   }
 }
 
