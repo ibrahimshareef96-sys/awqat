@@ -62,6 +62,17 @@ Verse keys only, never the Quran's words.
   [developer terms](https://api-docs.quran.foundation/legal/developer-terms/) apply to anyone distributing a build:
   they ask for an active Developer Console account and this credit, and do not allow the fonts to be offered apart
   from the app.
+- **The Quran speech model** (recite to find, memorise): Tarteel AI's
+  [whisper-tiny-ar-quran](https://huggingface.co/tarteel-ai/whisper-tiny-ar-quran), a fine-tune of OpenAI's Whisper
+  Tiny (MIT), released by Tarteel under the Apache License 2.0, as converted to ONNX by
+  [Sharjeelbaig/whisper-tiny-ar-quran-onnx](https://huggingface.co/Sharjeelbaig/whisper-tiny-ar-quran-onnx) (Apache
+  License 2.0), commit `cd93bdec117adc2f84d6c4ab91c10164a2e9bee9`. Downloaded on the phone only when the user asks,
+  every file checked against its SHA-256 in `src/recite/model.ts`, and run on the phone. Not bundled, not modified.
+- **The Quran text for recite to find**: the [Tanzil Project](https://tanzil.net)'s Uthmani text, version 1.1,
+  Copyright (C) 2007-2026 Tanzil Project, [Creative Commons Attribution 3.0](https://tanzil.net/docs/text_license).
+  Downloaded on the phone only when the user asks and kept there byte for byte, copyright block included; it is
+  matched against in memory and never changed. Tanzil's terms allow its use in any application that names the Tanzil
+  Project and links to tanzil.net, as the app's Settings and this file do.
 - **Weather**: [Open-Meteo](https://open-meteo.com), CC BY 4.0, used only in a voice talk.
 - **Book data and covers**: [Open Library](https://openlibrary.org), looked up when you scan or search for a book.
   Covers are saved on the phone and never committed to this repository.
@@ -83,6 +94,12 @@ Installed from npm; each package ships its own licence text in `node_modules`.
 | Capgo Capacitor Health (`@capgo/capacitor-health`) | MPL-2.0 |
 | ElevenLabs client (`@elevenlabs/client`), including the audio worklet copied into the build by `vite.config.ts` | MIT |
 | LiveKit client (`livekit-client`), brought in by the ElevenLabs client | Apache-2.0 |
+| transformers.js (`@huggingface/transformers`), which runs the speech model | Apache-2.0 |
+| ONNX Runtime Web (`onnxruntime-web`), whose WebAssembly build is copied into the app as `recite-runtime/` by `vite.config.ts` | MIT |
+| `@huggingface/jinja`, `@huggingface/tokenizers`, brought in by transformers.js | MIT / Apache-2.0 |
+
+`onnxruntime-node` and `sharp`, which transformers.js names for Node only, are replaced by the empty stand-ins in
+`stubs/` (package.json `overrides`), so their native binaries are never installed.
 | Vite, Vitest, TypeScript, happy-dom (development only) | MIT / Apache-2.0 |
 
 The MPL-2.0 libraries are used unmodified; their source is available from npm and their own repositories.
