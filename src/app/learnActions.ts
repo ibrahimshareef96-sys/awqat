@@ -277,7 +277,7 @@ export async function openItem(itemId: string): Promise<void> {
   const url = cleanUrl(itemOf(state.learn, itemId)?.url ?? null);
   if (!url) return;
   try {
-    if (isNative()) await Browser.open({ url, presentationStyle: "popover", toolbarColor: "#121219" });
+    if (isNative()) await Browser.open({ url, presentationStyle: "popover", toolbarColor: "#0B0A0D" });
     else window.open(url, "_blank", "noopener");
   } catch {
     setNotice(LEARN_MESSAGES.openFailed);

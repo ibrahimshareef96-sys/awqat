@@ -7,11 +7,12 @@
 @font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerif-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
 
 :root {
-  --ink: #f5f1e8;
-  --soft: rgba(245, 241, 232, 0.8);
-  --muted: rgba(245, 241, 232, 0.68);
+  /* Itqan's bone and ink (brand/README.md): the app keeps its own layout, serif and skies. */
+  --ink: #f5f1ea;
+  --soft: rgba(245, 241, 234, 0.8);
+  --muted: rgba(245, 241, 234, 0.68);
   --accent: #e2cc9a;
-  --ground: #121219;
+  --ground: #0b0a0d;
   --glass: rgba(13, 13, 19, 0.42);
   --glass-deep: rgba(14, 14, 20, 0.62);
   --hair: rgba(255, 255, 255, 0.1);

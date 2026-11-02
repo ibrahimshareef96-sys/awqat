@@ -22,7 +22,7 @@ export async function openTalk(): Promise<void> {
     return hooks.render();
   }
   try {
-    if (isNative()) await Browser.open({ url: talkPage(worker), presentationStyle: "popover", toolbarColor: "#121219" });
+    if (isNative()) await Browser.open({ url: talkPage(worker), presentationStyle: "popover", toolbarColor: "#0B0A0D" });
     else window.open(talkPage(worker), "_blank", "noopener");
     hooks.closeSheet(true);
   } catch {

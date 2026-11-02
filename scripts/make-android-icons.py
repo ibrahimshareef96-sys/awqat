@@ -1,4 +1,4 @@
-"""Draws the Android launcher icons, the notification icon and the splash screens: the Awqat mark on graphite.
+"""Draws the Android launcher icons, the notification icon and the splash screens: the Awqat mark on Itqan's ink.
 
 The mark itself is drawn by scripts/brand.py. Run after `npx cap add android` or a design change:
 python3 scripts/make-android-icons.py
@@ -44,7 +44,7 @@ def main() -> None:
         mark_layer(round(24 * k), 1.0, colour=(255, 255, 255), bold=True).save(drawable / "ic_stat_orb.png", optimize=True)
     background = RES / "values" / "ic_launcher_background.xml"
     background.write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
-                          '    <color name="ic_launcher_background">#121219</color>\n</resources>\n')
+                          f'    <color name="ic_launcher_background">{brand.hex_of(GROUND)}</color>\n</resources>\n')
     for splash in RES.glob("drawable*/splash.png"):
         w, h = Image.open(splash).size
         image = Image.new("RGBA", (w, h), GROUND + (255,))

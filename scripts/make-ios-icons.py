@@ -1,4 +1,4 @@
-"""Draws the iOS app icon and launch image: the same Awqat mark on graphite as the Android icons.
+"""Draws the iOS app icon and launch image: the same Awqat mark on Itqan's ink as the Android icons.
 
 Run after `npx cap add ios` or a design change: python3 scripts/make-ios-icons.py
 """
