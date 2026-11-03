@@ -5,7 +5,7 @@
  * downloaded model and text, and the runtime shipped inside the app. Every file's SHA-256 is checked before first use.
  */
 // First, before the libraries run: the worker's fetch refuses any other site (the page's policy does not reach here).
-import { ownFile } from "./sameOrigin.ts";
+import { ownFile, sameOriginFetch } from "./sameOrigin.ts";
 import { env, pipeline } from "@huggingface/transformers";
 import type { FromWorker, ToWorker } from "./messages.ts";
 import { MODEL_FILES, MODEL_ID } from "./model.ts";
@@ -49,6 +49,13 @@ async function checkFiles(base: string): Promise<"match" | "damaged" | "unread">
 }
 
 async function load(message: Extract<ToWorker, { type: "load" }>): Promise<void> {
+  const here = self.location.href;
+  const { mjs, wasm: binary } = message.runtime;
+  // Every address the page sends must be one of the app's own files, and a plain string: ONNX Runtime imports its
+  // runtime from these, which no fence sees, and it would read the href of an object that ownFile never looked at.
+  if (![message.base, message.tanzil, mjs, binary].every((href) => ownFile(href, here))) {
+    return post({ type: "failed", why: "model" });
+  }
   if (!message.checked) {
     const checked = await checkFiles(message.base);
     if (checked !== "match") return post({ type: "failed", why: checked === "damaged" ? "damaged" : "model" });
@@ -69,17 +76,14 @@ async function load(message: Extract<ToWorker, { type: "load" }>): Promise<void>
     env.useBrowserCache = false;
     // The runtime is loaded from its own address, never from a blob, which the page's policy refuses.
     env.useWasmCache = false;
-    // ONNX Runtime imports its runtime from these addresses, which the fetch fence never sees: the app's own copy only.
-    const { mjs, wasm: binary } = message.runtime;
-    if (!ownFile(mjs, self.location.href) || !ownFile(binary, self.location.href)) {
-      return post({ type: "failed", why: "model" });
-    }
+    // transformers.js keeps the fetch it found when it loaded: fenced here too, whatever order the bundle ran in.
+    env.fetch = sameOriginFetch(env.fetch as typeof fetch, here);
+    // Without these settings ONNX Runtime would fetch its runtime from a CDN: nothing loads unless they hold.
     const wasm = env.backends.onnx.wasm;
-    if (wasm) {
-      wasm.wasmPaths = { mjs: message.runtime.mjs, wasm: message.runtime.wasm };
-      wasm.numThreads = 1;
-      wasm.proxy = false;
-    }
+    if (!wasm) return post({ type: "failed", why: "model" });
+    wasm.wasmPaths = { mjs, wasm: binary };
+    wasm.numThreads = 1;
+    wasm.proxy = false;
     const asr = await pipeline("automatic-speech-recognition", MODEL_ID, { dtype: "q8", device: "wasm" });
     hear = asr as unknown as Hear;
     post({ type: "ready", checked: true });

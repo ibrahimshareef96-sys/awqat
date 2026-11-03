@@ -492,6 +492,8 @@ function renderOverlay(): void {
   }
   // The speaking orb appears with the Talk sheet (and starts from hidden the next time it opens).
   if (kind === "talk") followTalk(state.talk.phase, talk.talkSignal);
+  // Whatever sheet opens over a page being memorised (Go to page, Talk by a link or Siri), listening stops under it.
+  if (kind !== null) recite.pauseForSheet();
 }
 
 /** The clock tick redraws times and sky, but never under a field someone is typing in or a finger mid-tap. */
@@ -602,8 +604,6 @@ function closeSheet(force = false): void {
 function go(target: string, fromLink = false): void {
   if (target === "talk" || target === "add-book") {
     if (state.sheet === target) return;
-    // A page being memorised stops listening under the sheet: a link or Siri opens Talk with the app still in front.
-    recite.pauseForSheet();
     state.sheet = target;
     renderOverlay();
     // Tapped in the app, the Talk sheet starts a talk at once (or asks for the passphrase first). Opened by a link, it

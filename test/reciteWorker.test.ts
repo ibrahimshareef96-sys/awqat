@@ -89,6 +89,16 @@ describe("the speech worker", () => {
     expect(asr.pipeline).not.toHaveBeenCalled();
   });
 
+  it("loads nothing from an address that is another site's, or not a plain string", async () => {
+    const sly = { href: "https://cdn.example.com/ort.mjs", toString: () => "/recite-runtime/a.mjs" };
+    send({ ...LOAD, runtime: { mjs: sly as unknown as string, wasm: "/recite-runtime/a.wasm" } });
+    send({ ...LOAD, base: "https://cdn.example.com/model/" });
+    send({ ...LOAD, tanzil: "data:text/plain,1|1|text" });
+    await flush();
+    expect(said()).toEqual([1, 2, 3].map(() => ({ type: "failed", why: "model" })));
+    expect(asr.pipeline).not.toHaveBeenCalled();
+  });
+
   it("loads the runtime from the app's own scheme on iOS", async () => {
     worker.location.href = "capacitor://localhost/assets/worker.js";
     send({ ...LOAD, runtime: { mjs: "capacitor://localhost/recite-runtime/a.mjs",

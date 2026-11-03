@@ -51,14 +51,16 @@ slower.
   own script.
 - No audio leaves the phone. The files are read by a same-origin path (Capacitor's file server). The page's security
   policy lets the page reach no new site, but it does not cover the speech worker, which has no policy of its own. So
-  the worker's fetch refuses any other site itself (`src/recite/sameOrigin.ts`, its first import), which keeps
-  transformers.js off Hugging Face. ONNX Runtime loads its runtime with `import()`, which no fetch fence sees, and by
-  default from a CDN: `worker.ts` points it at the copy inside the app, and refuses to load at all when that address
-  is another site's. That override must stay. `'wasm-unsafe-eval'` is the only change to the page's policy. The page
+  the worker's fetch and XMLHttpRequest refuse anything but the app's own files themselves (`src/recite/sameOrigin.ts`,
+  its first import, and transformers.js's own copy of fetch, fenced again in `worker.ts`), which keeps transformers.js
+  off Hugging Face and Capacitor's native proxy out of reach. ONNX Runtime loads its runtime with `import()`, which no
+  fence sees, and by default from a CDN: `worker.ts` points it at the copy inside the app, and loads nothing unless
+  every address the page sent is a plain string naming one of the app's own files (never a data: or blob: address).
+  That override must stay. `'wasm-unsafe-eval'` is the only change to the page's policy. The page
   runs no WebAssembly itself; the directive stays until a build on iOS shows WebKit's worker needs no part of it.
 - The microphone is open only while the sheet says "Listening" or the memorise bar shows the listening button; turning
-  the page away, closing the sheet, leaving the reader, a sheet laid over the page (Talk opened by a link or Siri) or
-  sending the app to the background stops it. A download or a model load that finishes while the app is in the
+  the page away, closing the sheet, leaving the reader, any sheet laid over the page (Go to page, or Talk opened by a
+  link or Siri) or sending the app to the background stops it. A download or a model load that finishes while the app is in the
   background never opens it: the sheet says listening stopped, and the reciter taps Recite again. (Android's own
   microphone prompt pauses the app too; that one is left to finish. It never hides the page, so a hidden page always
   stops the microphone, one still starting included.)
