@@ -55,5 +55,6 @@ export default defineConfig({
   plugins: [talkWorklet(), reciteRuntime(), dropUnusedRuntimes()],
   worker: { format: "es", plugins: () => [dropUnusedRuntimes()] },
   build: { outDir: "dist", target: "es2022", assetsInlineLimit: 0 },
-  test: { include: ["test/**/*.test.ts"], environment: "node" },
+  // The tests never see a Worker built in from someone's .env.local: they set one themselves where they need it.
+  test: { include: ["test/**/*.test.ts"], environment: "node", env: { VITE_WORKER_URL: "" } },
 });
