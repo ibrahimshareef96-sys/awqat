@@ -14,6 +14,7 @@ let otherAyah: HTMLElement;
 let margin: HTMLElement;
 let retry: HTMLElement;
 let ready = true;
+let picks = true;
 const held = vi.fn();
 const clicked = vi.fn();
 
@@ -55,6 +56,7 @@ beforeEach(async () => {
   held.mockReset();
   clicked.mockReset();
   ready = true;
+  picks = true;
   hold = await import("../src/app/hold.ts");
   doc = document.implementation.createHTMLDocument("reader");
   pager = doc.createElement("div");
@@ -72,7 +74,7 @@ beforeEach(async () => {
   left.append(sameAyah, otherAyah, retry);
   pager.append(right, left);
   doc.body.append(pager);
-  hold.listenForHold({ hold: held, ready: () => ready }, doc);
+  hold.listenForHold({ hold: held, ready: () => ready, picks: () => picks }, doc);
   doc.addEventListener("click", clicked);
 });
 
@@ -236,6 +238,32 @@ describe("no hold", () => {
     holdAndLift(word);
     expect(held).not.toHaveBeenCalled();
     expect(lit()).toEqual([]);
+  });
+
+  it("over a page being memorised: nothing lights over its hidden words, and the long press's click is swallowed", () => {
+    picks = false;
+    pointer(word, "pointerdown");
+    vi.advanceTimersByTime(hold.HOLD_MS * 4);
+    expect(lit()).toEqual([]);
+    pointer(word, "pointerup");
+    expect(held).not.toHaveBeenCalled();
+    expect(lit()).toEqual([]);
+    click(word);
+    expect(clicked).not.toHaveBeenCalled();
+    // A right click with a mouse picks nothing either, and still opens no menu.
+    expect(contextMenu(word).defaultPrevented).toBe(true);
+    expect(held).not.toHaveBeenCalled();
+    expect(lit()).toEqual([]);
+  });
+
+  it("picks again once the page is no longer memorised", () => {
+    picks = false;
+    holdAndLift(word);
+    picks = true;
+    vi.advanceTimersByTime(hold.CLICK_AFTER_HOLD_MS);
+    holdAndLift(word);
+    expect(held).toHaveBeenCalledWith(word);
+    expect(lit()).toEqual(["31:20:3", "31:20:4"]);
   });
 
   it("for a right mouse button pressed (its context menu is the hold instead)", () => {

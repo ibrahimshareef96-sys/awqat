@@ -92,6 +92,10 @@ Verse keys only, never the Quran's words.
 
 - **Instrument Serif**, SIL Open Font License 1.1. The licence is in `public/fonts/OFL-InstrumentSerif.txt`, with
   the copy the iOS widgets use.
+- **Geist** and **Geist Mono** (Copyright 2024 The Geist Project Authors) and **Readex Pro** (Copyright 2018 The
+  Readex Pro Project Authors, with Reserved Font Name "RevReading Lexend"), SIL Open Font License 1.1. The licences
+  are in `brand/fonts/OFL-Geist.txt` and `brand/fonts/OFL-ReadexPro.txt`. They are used only by `scripts/brand.py`,
+  which writes their letters as outlines into the brand pictures; the font files are not shipped in the app.
 
 ## Libraries
 

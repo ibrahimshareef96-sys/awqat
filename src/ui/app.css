@@ -398,6 +398,8 @@ input[type="search"]::-webkit-search-cancel-button { display: none; }
 .link-inline { padding: 0; border: 0; background: none; color: var(--ink); font: inherit; cursor: pointer;
   text-decoration: underline; text-underline-offset: 3px; }
 .inline .link-inline { min-height: 44px; padding: 0 8px; }
+/* A link in the small print: a 44 px target that leaves the line's height as it is. */
+.foot .link-inline { padding: 14px 4px; margin: -14px -4px; }
 fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 legend { padding: 0 0 8px; }
 .pick { position: relative; display: flex; align-items: center; justify-content: center; }

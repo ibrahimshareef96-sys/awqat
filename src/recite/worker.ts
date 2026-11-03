@@ -4,6 +4,8 @@
  * the Tanzil text's search index, off the page so the page never stutters. It reads only same-origin files: the
  * downloaded model and text, and the runtime shipped inside the app. Every file's SHA-256 is checked before first use.
  */
+// First, before the libraries run: the worker's fetch refuses any other site (the page's policy does not reach here).
+import "./sameOrigin.ts";
 import { env, pipeline } from "@huggingface/transformers";
 import type { FromWorker, ToWorker } from "./messages.ts";
 import { MODEL_FILES, MODEL_ID } from "./model.ts";

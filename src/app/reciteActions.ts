@@ -6,6 +6,8 @@
  * The microphone is on only while the sheet says "Listening" or the memorise bar shows it listening: every start
  * takes a number (`run`), so a late start, or a late frame, from an earlier one is let go.
  */
+import { Browser } from "@capacitor/browser";
+import { isNative } from "../device.ts";
 import { micRefused } from "../talk/mic.ts";
 import { slips, startMemorise, hearChunk, peek, clearSlip } from "../recite/align.ts";
 import { FIND_CUT, MEMORISE_CUT, flush, hearFrame, level, startListening, type Listening } from "../recite/audio.ts";
@@ -25,6 +27,8 @@ import * as mushaf from "./mushafActions.ts";
 const FIND_LONGEST = 90;
 /** An ayah found stays lit this long once its page opens. */
 const LIT_MS = 4000;
+/** Where the Tanzil Project keeps track of changes to its text. */
+const TANZIL_SITE = "https://tanzil.net";
 
 let capture: Capture | null = null;
 /** The microphone is being started: on Android its permission prompt pauses the app, which is not going away. */
@@ -175,6 +179,8 @@ async function listenFind(): Promise<void> {
     });
     if (mine !== run) return started.stop();
     capture = started;
+    // The page went out of sight while the microphone started (Android's prompt never hides it): it stops at once.
+    if (outOfSight()) appAway(false);
   } catch (error) {
     if (mine === run) setFind({ phase: "problem", problem: problemOf(error) });
   } finally {
@@ -249,11 +255,15 @@ export async function startMemorising(): Promise<void> {
     return hooks.render();
   }
   const files = await reciteFiles();
+  // The reader may have closed while the files were looked for: nothing starts, and no sheet opens over another screen.
+  if (state.screen !== "mushaf") return;
   if (!files.ready) return openFind("memorise");
   await beginMemorise(files);
 }
 
 async function beginMemorise(files: Ready): Promise<void> {
+  // Only on the reader: leaving it ends a memorising (leaveReader), and nothing would end one started after.
+  if (state.screen !== "mushaf") return;
   const view = wordsInView();
   if (!view) return;
   attempts += 1;
@@ -310,6 +320,7 @@ async function listenMemorise(): Promise<void> {
     });
     if (mine !== run) return started.stop();
     capture = started;
+    if (outOfSight()) appAway(false);
   } catch (error) {
     if (mine !== run || !state.memorise) return;
     setMemorise({ phase: "paused", problem: problemOf(error) });
@@ -357,12 +368,24 @@ export function peekWord(): void {
   setMemorise({ m: peek(state.memorise.m) });
 }
 
+/**
+ * A page is being memorised (not left for another page): its hidden words stay hidden, so holding one opens nothing.
+ */
+export const memorising = (): boolean => state.memorise !== null && state.memorise.phase !== "left";
+
+/**
+ * A sheet is laid over the page (the summary, or Talk opened by a link or Siri with the app still in front): listening
+ * stops, and a model still getting ready does not start it under the sheet.
+ */
+export function pauseForSheet(): void {
+  const phase = state.memorise?.phase;
+  if (phase === "listening") pauseMemorise();
+  else if (phase === "preparing") setMemorise({ phase: "paused" });
+}
+
 export function finishMemorising(): void {
-  const session = state.memorise;
-  if (!session) return;
-  if (session.phase === "listening") pauseMemorise();
-  // Done while the model was still getting ready: it does not start listening under the summary.
-  else if (session.phase === "preparing") setMemorise({ phase: "paused" });
+  if (!state.memorise) return;
+  pauseForSheet();
   state.sheet = "memorise-done";
   hooks.renderOverlay();
 }
@@ -439,7 +462,8 @@ export function afterReaderDraw(root: ParentNode): void {
 
 /**
  * The app went to the background: listening stops, and says so (the system may cut the microphone anyway). Android's
- * microphone prompt pauses the app too: while that is open, listening is left to start once it is answered.
+ * microphone prompt pauses the app too: while that is open, listening is left to start once it is answered. Only the
+ * pause event may be the prompt (`android` true); the page hidden is always the app going away (main.ts).
  */
 export function appAway(android: boolean): void {
   if (starting && android) return;
@@ -468,6 +492,17 @@ export function leaveReader(): void {
 export function sheetClosed(): void {
   if (phaseNow() === "listening" || phaseNow() === "finding") stopMic();
   state.recite = closedFind();
+}
+
+/** The Tanzil text's link in Settings, which its terms ask for: tanzil.net in the browser, only when it is tapped. */
+export async function openTanzil(): Promise<void> {
+  try {
+    if (isNative()) await Browser.open({ url: TANZIL_SITE, presentationStyle: "popover", toolbarColor: "#0B0A0D" });
+    else window.open(TANZIL_SITE, "_blank", "noopener");
+  } catch {
+    setNotice("tanzil.net did not open. Try again.");
+    hooks.render();
+  }
 }
 
 /** Settings: takes the recitation download off the phone; it downloads again the next time it is used. */

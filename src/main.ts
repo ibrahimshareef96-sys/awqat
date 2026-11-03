@@ -602,6 +602,8 @@ function closeSheet(force = false): void {
 function go(target: string, fromLink = false): void {
   if (target === "talk" || target === "add-book") {
     if (state.sheet === target) return;
+    // A page being memorised stops listening under the sheet: a link or Siri opens Talk with the app still in front.
+    recite.pauseForSheet();
     state.sheet = target;
     renderOverlay();
     // Tapped in the app, the Talk sheet starts a talk at once (or asks for the passphrase first). Opened by a link, it
@@ -836,6 +838,7 @@ function act(action: string, value: string): void {
     case "memorise-start": return void recite.startMemorising();
     case "memorise-toggle": return void recite.toggleListening();
     case "recite-remove": return void recite.removeDownload();
+    case "tanzil-open": return void recite.openTanzil();
     case "memorise-peek": return recite.peekWord();
     case "memorise-done": return recite.finishMemorising();
     case "memorise-clear": return recite.clearWordSlip(value);
@@ -926,7 +929,7 @@ function holdWord(el: HTMLElement): void {
 function handleTap(el: HTMLElement): void {
   const d = el.dataset;
   // While a page is memorised, holding a word does not open its ayah: that would show the hidden words.
-  if (d.word) return state.memorise && state.memorise.phase !== "left" ? undefined : mushaf.openWord(d.word);
+  if (d.word) return recite.memorising() ? undefined : mushaf.openWord(d.word);
   const day = model(new Date()).today.date;
   if (d.go) go(d.go);
   else if (d.mark && (PRAYERS as readonly string[]).includes(d.mark)) {
@@ -1204,7 +1207,9 @@ async function boot(): Promise<void> {
   window.addEventListener("scroll", meaning.noteScroll, { passive: true });
   listenForHands({ settled: onSettled, free: onHandsFree });
   listenForBook({ landed: (page) => onSettled(page), moving: bookMoving });
-  listenForHold({ hold: holdWord, ready: () => state.screen === "mushaf" && !state.sheet });
+  // While a page is memorised a hold picks nothing, so no ayah lights up over its hidden words.
+  listenForHold({ hold: holdWord, ready: () => state.screen === "mushaf" && !state.sheet,
+    picks: () => !recite.memorising() });
   window.addEventListener("resize", () => requestAnimationFrame(refit));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && state.sheet) closeSheet();
@@ -1217,7 +1222,8 @@ async function boot(): Promise<void> {
     resetBook();
     if (document.hidden) {
       flushFields();
-      recite.appAway(platform() === "android");
+      // A hidden page is the app really in the background, never Android's microphone prompt (that only pauses it).
+      recite.appAway(false);
     } else recite.appBack();
   });
   setInterval(tick, TICK_MS);

@@ -23,6 +23,11 @@ export interface HoldCallbacks {
   hold: (word: HTMLElement) => void;
   /** Whether a hold may pick an ayah now: the mushaf open with no sheet up. */
   ready: () => boolean;
+  /**
+   * Whether a word held may pick its ayah (not on a page being memorised, whose words are hidden: none lights). A press
+   * that picks nothing is still a press, so the click after a long one is swallowed, as it is away from the words.
+   */
+  picks?: () => boolean;
 }
 
 interface Press {
@@ -54,6 +59,9 @@ const inPager = (target: EventTarget | null): target is Element =>
 
 const wordAt = (target: EventTarget | null): HTMLElement | null =>
   target instanceof Element ? target.closest<HTMLElement>("[data-pager] [data-word]") : null;
+
+/** A held word may pick its ayah now. */
+const picking = (): boolean => callbacks.ready() && (callbacks.picks?.() ?? true);
 
 const ayahOf = (word: HTMLElement): string | null => {
   const ayah = (word.dataset.word ?? "").split(":").slice(0, 2).join(":");
@@ -111,7 +119,7 @@ function arm(word: HTMLElement): void {
 /** The ayah opens: it stays lit while its sheet is up (until release()), and the click after it is swallowed. */
 function open(word: HTMLElement, now = Date.now()): void {
   swallowUntil = now + CLICK_AFTER_HOLD_MS;
-  if (!word.isConnected || !callbacks.ready()) return unlight(word.ownerDocument);
+  if (!word.isConnected || !picking()) return unlight(word.ownerDocument);
   light(word, true);
   callbacks.hold(word);
 }
@@ -123,7 +131,7 @@ function onPointerDown(event: PointerEvent): void {
   drop(doc);
   swallowUntil = 0;
   if (event.button !== 0 || !inPager(event.target) || !callbacks.ready()) return;
-  const word = wordAt(event.target);
+  const word = picking() ? wordAt(event.target) : null;
   press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: Date.now(), word, armed: false, moved: 0,
     menu: false };
   if (!word) return;
@@ -189,7 +197,7 @@ function onContextMenu(event: MouseEvent): void {
   if (!inPager(event.target)) return;
   event.preventDefault();
   const word = wordAt(event.target);
-  if (!word || !callbacks.ready()) return;
+  if (!word || !picking()) return;
   if (press?.word === word) return arm(word);
   if (!press) open(word);
 }

@@ -2,7 +2,8 @@
  * What comes from hisnmuslim.com and Quran.com, and the phone's own copy of it, read defensively. Every size is capped
  * before anything is kept, every field must be the type it should be, and an item whose Arabic is not ours is left out
  * (a site that renumbered would otherwise put another dhikr's meaning under ours). Anything that does not hold up comes
- * to nothing, never to a crash; what is kept is plain text, shown only through esc().
+ * to nothing, never to a crash; what is kept is plain text, shown only through esc(). The native layer reads an answer
+ * whole before any of this runs: that read itself is not capped, only what it hands over.
  */
 import { plainTranslation, shareOfPairs, withoutInvisible } from "./meaningText.ts";
 

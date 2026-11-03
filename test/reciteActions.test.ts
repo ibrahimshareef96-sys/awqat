@@ -41,6 +41,12 @@ const flush = async (): Promise<void> => {
   for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0));
 };
 
+/** The page as the system shows it: hidden once the app is really in the background. */
+function pageHidden(hidden: boolean): void {
+  if (hidden) Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+  else delete (document as { hidden?: boolean }).hidden;
+}
+
 const loud = (): Float32Array => Float32Array.from({ length: FRAME }, (_, i) => (i % 2 ? 0.3 : -0.3));
 const quiet = (): Float32Array => new Float32Array(FRAME);
 
@@ -80,6 +86,7 @@ beforeEach(() => {
   hooks.closeSheet = vi.fn(() => { state.sheet = null; });
   hooks.go = vi.fn();
   state.sheet = null;
+  state.screen = "mushaf";
   state.recite = closedFind();
   state.memorise = null;
   state.mushafPage = 294;
@@ -281,6 +288,58 @@ describe("the app going to the background", () => {
     start.resolve({ stop });
     await flush();
     expect(stop).not.toHaveBeenCalled();
+  });
+
+  it("stops a microphone still starting when the page is hidden after Android's pause", async () => {
+    const start = deferred<{ stop: () => void }>();
+    vi.mocked(mic.startCapture).mockReturnValue(start.promise);
+    void recite.openFind();
+    await flush();
+    // The pause may be the microphone prompt; the page hidden is the app really going away (main.ts sends it so).
+    recite.appAway(true);
+    recite.appAway(false);
+    const stop = vi.fn();
+    start.resolve({ stop });
+    await flush();
+    expect(stop).toHaveBeenCalled();
+    expect(state.recite).toMatchObject({ phase: "problem", problem: "away" });
+  });
+
+  it("stops a microphone that finished starting with the page out of sight", async () => {
+    const start = deferred<{ stop: () => void }>();
+    vi.mocked(mic.startCapture).mockReturnValue(start.promise);
+    void recite.openFind();
+    await flush();
+    recite.appAway(true);
+    const stop = vi.fn();
+    pageHidden(true);
+    try {
+      start.resolve({ stop });
+      await flush();
+    } finally {
+      pageHidden(false);
+    }
+    expect(stop).toHaveBeenCalled();
+    expect(state.recite).toMatchObject({ phase: "problem", problem: "away" });
+  });
+
+  it("pauses memorising when its microphone finished starting with the page out of sight", async () => {
+    const start = deferred<{ stop: () => void }>();
+    vi.mocked(mic.startCapture).mockReturnValue(start.promise);
+    void recite.startMemorising();
+    await flush();
+    expect(state.memorise?.phase).toBe("listening");
+    recite.appAway(true);
+    const stop = vi.fn();
+    pageHidden(true);
+    try {
+      start.resolve({ stop });
+      await flush();
+    } finally {
+      pageHidden(false);
+    }
+    expect(stop).toHaveBeenCalled();
+    expect(state.memorise?.phase).toBe("paused");
   });
 
   it("stops a microphone still starting when the app really went away", async () => {
@@ -490,6 +549,77 @@ describe("memorising a page", () => {
     expect(state.memorise?.phase).toBe("listening");
   });
 
+  it("never starts once the reader has closed while the files were looked for", async () => {
+    const files = deferred<typeof READY>();
+    vi.mocked(assets.reciteFiles).mockReturnValueOnce(files.promise);
+    const started = recite.startMemorising();
+    state.screen = "home";
+    recite.leaveReader();
+    files.resolve(READY);
+    await started;
+    await flush();
+    expect(state.memorise).toBeNull();
+    expect(engine.prepare).not.toHaveBeenCalled();
+    expect(mic.startCapture).not.toHaveBeenCalled();
+  });
+
+  it("never offers the download over another screen once the reader has closed", async () => {
+    const files = deferred<{ ready: false }>();
+    vi.mocked(assets.reciteFiles).mockReturnValueOnce(files.promise);
+    const started = recite.startMemorising();
+    state.screen = "home";
+    recite.leaveReader();
+    files.resolve({ ready: false });
+    await started;
+    expect(state.sheet).toBeNull();
+    expect(state.memorise).toBeNull();
+  });
+
+  it("stops listening under a sheet laid over the page, such as Talk opened by a link", async () => {
+    void recite.startMemorising();
+    await flush();
+    expect(state.memorise?.phase).toBe("listening");
+    recite.pauseForSheet();
+    expect(state.memorise?.phase).toBe("paused");
+    expect(captures[0].stop).toHaveBeenCalled();
+  });
+
+  it("does not start listening under a sheet that came while the model was getting ready", async () => {
+    const loaded = deferred<{ ok: true }>();
+    vi.mocked(engine.prepare).mockReturnValueOnce(loaded.promise);
+    void recite.startMemorising();
+    await flush();
+    expect(state.memorise?.phase).toBe("preparing");
+    recite.pauseForSheet();
+    state.sheet = "talk";
+    loaded.resolve({ ok: true });
+    await flush();
+    expect(state.memorise?.phase).toBe("paused");
+    expect(mic.startCapture).not.toHaveBeenCalled();
+  });
+
+  it("leaves a sheet over a page that is not memorised alone", () => {
+    recite.pauseForSheet();
+    expect(state.memorise).toBeNull();
+    expect(hooks.render).not.toHaveBeenCalled();
+  });
+
+  it("is memorising, so a held word opens nothing, until the page is turned away or it ends", async () => {
+    expect(recite.memorising()).toBe(false);
+    void recite.startMemorising();
+    await flush();
+    expect(recite.memorising()).toBe(true);
+    void recite.toggleListening();
+    expect(state.memorise?.phase).toBe("paused");
+    expect(recite.memorising()).toBe(true);
+    vi.mocked(mushaf.pagesInView).mockReturnValue([300]);
+    recite.afterReaderDraw(document);
+    expect(state.memorise?.phase).toBe("left");
+    expect(recite.memorising()).toBe(false);
+    recite.endMemorising();
+    expect(recite.memorising()).toBe(false);
+  });
+
   it("ends, and lets the model go, when the reader closes", async () => {
     void recite.startMemorising();
     await flush();
@@ -497,6 +627,18 @@ describe("memorising a page", () => {
     expect(state.memorise).toBeNull();
     expect(captures[0].stop).toHaveBeenCalled();
     expect(engine.release).toHaveBeenCalled();
+  });
+});
+
+describe("the Tanzil credit", () => {
+  it("opens tanzil.net in the browser, as Tanzil's terms ask of an app using its text", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    try {
+      await recite.openTanzil();
+      expect(open).toHaveBeenCalledWith("https://tanzil.net", "_blank", "noopener");
+    } finally {
+      open.mockRestore();
+    }
   });
 });
 

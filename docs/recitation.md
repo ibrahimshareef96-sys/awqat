@@ -48,12 +48,17 @@ slower.
   how big they are.
 - Nothing the model writes is shown. A slip is pointed at on the page, where the right word is drawn in the mushaf's
   own script.
-- No audio leaves the phone. The page's security policy lets it reach no new site: the files are read by a
-  same-origin path (Capacitor's file server), and `'wasm-unsafe-eval'` is the only change to the policy.
+- No audio leaves the phone. The files are read by a same-origin path (Capacitor's file server). The page's security
+  policy lets the page reach no new site, but it does not cover the speech worker, which has no policy of its own: so
+  the worker's fetch refuses any other site itself (`src/recite/sameOrigin.ts`, its first import), whatever
+  transformers.js or ONNX Runtime might default to. `'wasm-unsafe-eval'` is the only change to the page's policy. The
+  page runs no WebAssembly itself; the directive stays until a build on iOS shows WebKit's worker needs no part of it.
 - The microphone is open only while the sheet says "Listening" or the memorise bar shows the listening button; turning
-  the page away, closing the sheet, leaving the reader or sending the app to the background stops it. A download or a
-  model load that finishes while the app is in the background never opens it: the sheet says listening stopped, and
-  the reciter taps Recite again. (Android's own microphone prompt pauses the app too; that one is left to finish.)
+  the page away, closing the sheet, leaving the reader, a sheet laid over the page (Talk opened by a link or Siri) or
+  sending the app to the background stops it. A download or a model load that finishes while the app is in the
+  background never opens it: the sheet says listening stopped, and the reciter taps Recite again. (Android's own
+  microphone prompt pauses the app too; that one is left to finish. It never hides the page, so a hidden page always
+  stops the microphone, one still starting included.)
 - A model that fails on what it was given is let go and named as the problem, never taken for "a few more words".
 
 ## Files
@@ -67,6 +72,7 @@ slower.
 | `src/recite/audio.ts` | Resampling and cutting at pauses |
 | `src/recite/model.ts`, `assets.ts` | What is downloaded, from where, checked how |
 | `src/recite/engine.ts`, `worker.ts`, `messages.ts` | The speech worker and its messages |
+| `src/recite/sameOrigin.ts` | The worker's fetch, held to the app's own files |
 | `src/recite/mic.ts`, `public/recite/pcm-capture.js` | The microphone |
 | `src/app/reciteActions.ts`, `src/ui/reciteView.ts` | The sheet, the memorise bar and its summary |
 

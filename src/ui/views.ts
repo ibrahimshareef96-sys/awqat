@@ -394,6 +394,7 @@ export function settingsView(v: ViewModel, turn?: TurnStats): string {
     `(CC BY 4.0) · covers and book data: Open Library · calendars read with ical.js (MPL-2.0) · health data through ` +
     `Capgo's Capacitor Health (MPL-2.0) · voice through ElevenLabs' client (MIT) and LiveKit (Apache-2.0) · recitation ` +
     `heard by Tarteel AI's whisper-tiny-ar-quran (Apache-2.0) through transformers.js (Apache-2.0) and ONNX Runtime ` +
-    `(MIT), placed on the Quran text of the Tanzil Project (tanzil.net)</p>` +
+    `(MIT), placed on the Quran text of the Tanzil Project (<button type="button" class="link-inline" ` +
+    `data-action="tanzil-open">tanzil.net</button>)</p>` +
     `</main>`;
 }
