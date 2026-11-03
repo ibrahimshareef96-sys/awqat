@@ -29,16 +29,16 @@ export interface FindFlow {
 export type MemorisePhase = "preparing" | "listening" | "paused" | "left";
 
 export interface MemoriseSession {
-  /** The page the reader was on when memorising began (with two pages open, the right-hand one). */
+  /** The page open when memorising began; with two pages open, either page of that spread. */
   page: number;
-  /** Every page whose words are hidden: the page, or both pages of the spread. */
+  /** Every page whose words are hidden, in reading order: the page, or both pages of the spread. */
   pages: readonly number[];
   m: Memorise;
   phase: MemorisePhase;
   /** Stretches of recitation the model is still hearing. */
   working: number;
   problem: ReciteProblem | null;
-  /** Counts each fresh start of the page, so a stretch heard for an earlier one is let go. */
+  /** Counts each fresh start, so a load or a stretch heard for an earlier one is let go. */
   attempt: number;
 }
 

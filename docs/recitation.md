@@ -5,7 +5,8 @@ Two features, one engine, all on the phone.
 - **Recite to find.** Tap the microphone in the mushaf's top bar, recite three or four words of any ayah, and its page
   opens with the ayah lit.
 - **Memorise.** Tap Memorise under a page. Its words are hidden (each keeps its place, so the lines stand as printed),
-  and they fill in as you recite. A word heard as another is drawn in rose, a skipped one is underlined in apricot, a
+  and they fill in as you recite. With two pages open (a tablet, or a folding phone open on its side), both pages are
+  hidden and memorised together. A word heard as another is drawn in rose, a skipped one is underlined in apricot, a
   peeked one in sand. At the end, the slips can be kept as revision mistakes on their words, so they show on the page
   and among the muraja'ah plan's weak pages.
 
@@ -49,10 +50,12 @@ slower.
 - Nothing the model writes is shown. A slip is pointed at on the page, where the right word is drawn in the mushaf's
   own script.
 - No audio leaves the phone. The files are read by a same-origin path (Capacitor's file server). The page's security
-  policy lets the page reach no new site, but it does not cover the speech worker, which has no policy of its own: so
-  the worker's fetch refuses any other site itself (`src/recite/sameOrigin.ts`, its first import), whatever
-  transformers.js or ONNX Runtime might default to. `'wasm-unsafe-eval'` is the only change to the page's policy. The
-  page runs no WebAssembly itself; the directive stays until a build on iOS shows WebKit's worker needs no part of it.
+  policy lets the page reach no new site, but it does not cover the speech worker, which has no policy of its own. So
+  the worker's fetch refuses any other site itself (`src/recite/sameOrigin.ts`, its first import), which keeps
+  transformers.js off Hugging Face. ONNX Runtime loads its runtime with `import()`, which no fetch fence sees, and by
+  default from a CDN: `worker.ts` points it at the copy inside the app, and refuses to load at all when that address
+  is another site's. That override must stay. `'wasm-unsafe-eval'` is the only change to the page's policy. The page
+  runs no WebAssembly itself; the directive stays until a build on iOS shows WebKit's worker needs no part of it.
 - The microphone is open only while the sheet says "Listening" or the memorise bar shows the listening button; turning
   the page away, closing the sheet, leaving the reader, a sheet laid over the page (Talk opened by a link or Siri) or
   sending the app to the background stops it. A download or a model load that finishes while the app is in the
@@ -60,6 +63,10 @@ slower.
   microphone prompt pauses the app too; that one is left to finish. It never hides the page, so a hidden page always
   stops the microphone, one still starting included.)
 - A model that fails on what it was given is let go and named as the problem, never taken for "a few more words".
+- A speech worker that fails, while loading or after, answers everything still waiting on it, and the next try loads
+  the model again.
+- Memorise starts only on the reader with no sheet over it: a sheet that arrives while the files are checked (Talk by
+  a link, say) keeps its place, and nothing listens under it.
 
 ## Files
 

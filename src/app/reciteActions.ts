@@ -3,8 +3,9 @@
  * (recite/audio.ts), heard by the speech worker on this device (recite/engine.ts), and laid on the Quran's text
  * (recite/search.ts) or on the page (recite/align.ts). Nothing leaves the device but the one-time download.
  *
- * The microphone is on only while the sheet says "Listening" or the memorise bar shows it listening: every start
- * takes a number (`run`), so a late start, or a late frame, from an earlier one is let go.
+ * The microphone is on only while the sheet says "Listening" or the memorise bar shows it listening: closing the
+ * sheet, turning the page away, leaving the reader, a sheet laid over the page or the app going to the background
+ * stops it. Every start takes a number (`run`), so a late start, or a late frame, from an earlier one is let go.
  */
 import { Browser } from "@capacitor/browser";
 import { isNative } from "../device.ts";
@@ -244,19 +245,21 @@ export function openFound(value: string): void {
 function wordsInView(): { pages: number[]; words: MushafWord[] } | null {
   const pages = mushaf.pagesInView();
   const found = pages.map((p) => mushaf.pageWords(p));
-  if (found.some((p) => !p || p.words.length === 0)) return null;
+  if (found.length === 0 || found.some((p) => !p || p.words.length === 0)) return null;
   return { pages, words: found.flatMap((p) => p!.words) };
 }
 
 /** Memorise the page (or both pages open): their words hidden, then filled in as they are recited. */
 export async function startMemorising(): Promise<void> {
   if (!wordsInView()) {
-    setNotice("This page has not opened yet. Try again once its words are here.");
+    setNotice(mushaf.pagesInView().length > 1 ? "These pages have not opened yet. Try again once their words are here."
+      : "This page has not opened yet. Try again once its words are here.");
     return hooks.render();
   }
   const files = await reciteFiles();
-  // The reader may have closed while the files were looked for: nothing starts, and no sheet opens over another screen.
-  if (state.screen !== "mushaf") return;
+  // The reader may have closed, or a sheet (Talk by a link or Siri) come over it, while the files were looked for:
+  // nothing starts, and no sheet opens over another screen or replaces the one that came.
+  if (state.screen !== "mushaf" || state.sheet !== null) return;
   if (!files.ready) return openFind("memorise");
   await beginMemorise(files);
 }
@@ -301,8 +304,9 @@ async function listenMemorise(): Promise<void> {
   const session = state.memorise;
   if (!session) return;
   if (!inViewOf(session)) return setMemorise({ phase: "left" });
-  // Never under the summary, and never with the app out of sight.
-  if (state.sheet === "memorise-done" || outOfSight()) return setMemorise({ phase: "paused" });
+  // Never under a sheet (the summary, or Talk by a link), and never with the app out of sight. Every way in closes its
+  // own sheet first: the download sheet (carryOn) and the summary (memoriseAgain).
+  if (state.sheet !== null || outOfSight()) return setMemorise({ phase: "paused" });
   stopMic();
   const mine = run;
   heard = startListening();

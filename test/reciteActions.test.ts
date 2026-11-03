@@ -21,6 +21,7 @@ import * as mic from "../src/recite/mic.ts";
 import * as assets from "../src/recite/assets.ts";
 import * as mushaf from "../src/app/mushafActions.ts";
 import { FRAME } from "../src/recite/audio.ts";
+import { startMemorise } from "../src/recite/align.ts";
 import type { MushafWord } from "../src/quran/mushafPage.ts";
 import { closedFind } from "../src/recite/session.ts";
 import { hooks, state } from "../src/app/state.ts";
@@ -128,6 +129,18 @@ describe("recite to find", () => {
     await flush();
     expect(engine.hear).not.toHaveBeenCalled();
     expect(state.recite.result).toEqual({ kind: "short" });
+  });
+
+  it("still asks for more words when the model is fine and heard no words", async () => {
+    vi.mocked(engine.hear).mockResolvedValue("");
+    void recite.openFind();
+    await flush();
+    for (let i = 0; i < 8; i++) sendFrame(loud());
+    recite.stopFind();
+    await flush();
+    expect(state.recite).toMatchObject({ phase: "result", result: { kind: "short" } });
+    expect(engine.find).not.toHaveBeenCalled();
+    expect(engine.release).not.toHaveBeenCalled();
   });
 
   it("stops a microphone that starts only after the sheet closed", async () => {
@@ -256,6 +269,31 @@ describe("recite to find", () => {
     expect(state.recite.phase).toBe("listening");
   });
 
+  it("says the model failed again, and does not listen, when it still will not start", async () => {
+    vi.mocked(engine.prepare).mockResolvedValue({ ok: false, why: "model" });
+    await recite.openFind();
+    vi.mocked(engine.isReady).mockReturnValue(false);
+    recite.again();
+    await flush();
+    expect(engine.prepare).toHaveBeenCalledTimes(2);
+    expect(state.recite).toMatchObject({ phase: "problem", problem: "model" });
+    expect(mic.startCapture).not.toHaveBeenCalled();
+  });
+
+  it("listens again at once on Recite again while the model is loaded", async () => {
+    void recite.openFind();
+    await flush();
+    for (let i = 0; i < 8; i++) sendFrame(loud());
+    recite.stopFind();
+    await flush();
+    expect(state.recite.phase).toBe("result");
+    recite.again();
+    await flush();
+    expect(engine.prepare).toHaveBeenCalledTimes(1);
+    expect(state.recite.phase).toBe("listening");
+    expect(captures).toHaveLength(2);
+  });
+
   it("says when the microphone is refused, or will not start", async () => {
     vi.mocked(mic.startCapture).mockRejectedValueOnce(Object.assign(new Error("no"), { name: "NotFoundError" }));
     void recite.openFind();
@@ -290,6 +328,21 @@ describe("the app going to the background", () => {
     expect(stop).not.toHaveBeenCalled();
   });
 
+  it("stops listening on Android too, once the microphone has started", async () => {
+    const start = deferred<{ stop: () => void }>();
+    vi.mocked(mic.startCapture).mockReturnValue(start.promise);
+    void recite.openFind();
+    await flush();
+    recite.appAway(true);
+    const stop = vi.fn();
+    start.resolve({ stop });
+    await flush();
+    expect(stop).not.toHaveBeenCalled();
+    recite.appAway(true);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(state.recite.problem).toBe("away");
+  });
+
   it("stops a microphone still starting when the page is hidden after Android's pause", async () => {
     const start = deferred<{ stop: () => void }>();
     vi.mocked(mic.startCapture).mockReturnValue(start.promise);
@@ -321,6 +374,13 @@ describe("the app going to the background", () => {
     }
     expect(stop).toHaveBeenCalled();
     expect(state.recite).toMatchObject({ phase: "problem", problem: "away" });
+    // Back in the app, Recite again listens.
+    recite.appBack();
+    micOpensAtOnce();
+    recite.again();
+    await flush();
+    expect(state.recite.phase).toBe("listening");
+    expect(captures).toHaveLength(1);
   });
 
   it("pauses memorising when its microphone finished starting with the page out of sight", async () => {
@@ -407,6 +467,15 @@ describe("the app going to the background", () => {
     expect(state.memorise?.phase).toBe("paused");
     expect(captures[0].stop).toHaveBeenCalled();
   });
+
+  it("changes nothing when nothing is listening", () => {
+    state.memorise = { page: 294, pages: [294], m: startMemorise(WORDS), phase: "paused", working: 0, problem: null,
+      attempt: 1 };
+    recite.appAway(false);
+    expect(state.memorise?.phase).toBe("paused");
+    expect(state.recite.phase).toBe("intro");
+    expect(mic.startCapture).not.toHaveBeenCalled();
+  });
 });
 
 describe("memorising a page", () => {
@@ -423,13 +492,28 @@ describe("memorising a page", () => {
     expect(state.notice).toContain("has not opened yet");
   });
 
+  it("will not start while no page is drawn in the reader", async () => {
+    vi.mocked(mushaf.pagesInView).mockReturnValue([]);
+    await recite.startMemorising();
+    expect(state.memorise).toBeNull();
+    expect(assets.reciteFiles).not.toHaveBeenCalled();
+  });
+
+  it("waits until both pages of a spread have opened", async () => {
+    vi.mocked(mushaf.pagesInView).mockReturnValue([293, 294]);
+    vi.mocked(mushaf.pageWords).mockImplementation((page) => (page === 294 ? null : { words: WORDS, at: new Map() }));
+    await recite.startMemorising();
+    expect(state.memorise).toBeNull();
+    expect(state.notice).toContain("These pages have not opened yet");
+  });
+
   it("hides both pages of a spread, and fills in what is recited", async () => {
-    vi.mocked(mushaf.pagesInView).mockReturnValue([294, 295]);
+    vi.mocked(mushaf.pagesInView).mockReturnValue([293, 294]);
     vi.mocked(mushaf.pageWords).mockImplementation((page) =>
-      ({ words: page === 294 ? WORDS.slice(0, 2) : WORDS.slice(2), at: new Map() }));
+      ({ words: page === 293 ? WORDS.slice(0, 2) : WORDS.slice(2), at: new Map() }));
     void recite.startMemorising();
     await flush();
-    expect(state.memorise?.pages).toEqual([294, 295]);
+    expect(state.memorise?.pages).toEqual([293, 294]);
     expect(state.memorise?.m.keys).toHaveLength(4);
     recitePhrase();
     await flush();
@@ -452,6 +536,25 @@ describe("memorising a page", () => {
     await flush();
     expect(state.memorise?.attempt).toBe(first + 1);
     expect(state.memorise?.m.marks.every((mark) => mark === null)).toBe(true);
+  });
+
+  it("starts both pages of a spread again from the top on Recite again", async () => {
+    vi.mocked(mushaf.pagesInView).mockReturnValue([293, 294]);
+    vi.mocked(mushaf.pageWords).mockImplementation((page) =>
+      ({ words: page === 293 ? WORDS.slice(0, 2) : WORDS.slice(2), at: new Map() }));
+    void recite.startMemorising();
+    await flush();
+    recitePhrase();
+    await flush();
+    const first = state.memorise?.attempt ?? 0;
+    recite.finishMemorising();
+    recite.memoriseAgain();
+    await flush();
+    expect(state.memorise?.pages).toEqual([293, 294]);
+    expect(state.memorise?.m.keys).toHaveLength(4);
+    expect(state.memorise?.m.marks.every((mark) => mark === null)).toBe(true);
+    expect(state.memorise?.attempt).toBe(first + 1);
+    expect(state.memorise?.phase).toBe("listening");
   });
 
   it("does not start listening when Done comes while the model is getting ready", async () => {
@@ -503,11 +606,11 @@ describe("memorising a page", () => {
   });
 
   it("counts a spread as in view whichever of its pages is open", async () => {
-    vi.mocked(mushaf.pagesInView).mockReturnValue([294, 295]);
+    vi.mocked(mushaf.pagesInView).mockReturnValue([293, 294]);
     void recite.startMemorising();
     await flush();
     // A turn back to the spread lands on its other page: still the pages memorised.
-    state.mushafPage = 295;
+    state.mushafPage = 293;
     recite.afterReaderDraw(document);
     expect(state.memorise?.phase).toBe("listening");
   });
@@ -521,6 +624,24 @@ describe("memorising a page", () => {
     const toggled = recite.toggleListening();
     recite.finishMemorising();
     files.resolve(READY);
+    await toggled;
+    await flush();
+    expect(state.sheet).toBe("memorise-done");
+    expect(state.memorise?.phase).toBe("paused");
+    expect(mic.startCapture).not.toHaveBeenCalled();
+  });
+
+  it("does not listen under the summary when Done comes while the model loads again", async () => {
+    vi.mocked(engine.prepare).mockResolvedValueOnce({ ok: false, why: "model" });
+    await recite.startMemorising();
+    vi.mocked(engine.isReady).mockReturnValue(false);
+    const loaded = deferred<{ ok: true }>();
+    vi.mocked(engine.prepare).mockReturnValueOnce(loaded.promise);
+    const toggled = recite.toggleListening();
+    await flush();
+    expect(state.memorise?.phase).toBe("preparing");
+    recite.finishMemorising();
+    loaded.resolve({ ok: true });
     await toggled;
     await flush();
     expect(state.sheet).toBe("memorise-done");
@@ -547,6 +668,29 @@ describe("memorising a page", () => {
     await recite.toggleListening();
     expect(engine.prepare).toHaveBeenCalledTimes(2);
     expect(state.memorise?.phase).toBe("listening");
+  });
+
+  it("stays paused, saying why, when the model still will not start", async () => {
+    vi.mocked(engine.prepare).mockResolvedValue({ ok: false, why: "model" });
+    await recite.startMemorising();
+    vi.mocked(engine.isReady).mockReturnValue(false);
+    await recite.toggleListening();
+    expect(engine.prepare).toHaveBeenCalledTimes(2);
+    expect(state.memorise).toMatchObject({ phase: "paused", problem: "model" });
+    expect(mic.startCapture).not.toHaveBeenCalled();
+  });
+
+  it("offers the download again when the files were taken off the phone", async () => {
+    vi.mocked(engine.prepare).mockResolvedValueOnce({ ok: false, why: "damaged" });
+    await recite.startMemorising();
+    expect(state.memorise).toMatchObject({ phase: "paused", problem: "damaged" });
+    vi.mocked(engine.isReady).mockReturnValue(false);
+    vi.mocked(assets.reciteFiles).mockResolvedValue({ ready: false });
+    await recite.toggleListening();
+    await flush();
+    expect(state.sheet).toBe("recite");
+    expect(state.recite).toMatchObject({ phase: "intro", then: "memorise" });
+    expect(mic.startCapture).not.toHaveBeenCalled();
   });
 
   it("never starts once the reader has closed while the files were looked for", async () => {
@@ -596,6 +740,43 @@ describe("memorising a page", () => {
     await flush();
     expect(state.memorise?.phase).toBe("paused");
     expect(mic.startCapture).not.toHaveBeenCalled();
+  });
+
+  it("never starts under a sheet that came while the files were looked for", async () => {
+    const files = deferred<typeof READY>();
+    vi.mocked(assets.reciteFiles).mockReturnValueOnce(files.promise);
+    const started = recite.startMemorising();
+    // What go("talk") does: no session yet, so there is nothing to pause.
+    recite.pauseForSheet();
+    state.sheet = "talk";
+    files.resolve(READY);
+    await started;
+    await flush();
+    expect(state.sheet).toBe("talk");
+    expect(state.memorise).toBeNull();
+    expect(mic.startCapture).not.toHaveBeenCalled();
+  });
+
+  it("never puts the download in place of a sheet that came while the files were looked for", async () => {
+    const files = deferred<{ ready: false }>();
+    vi.mocked(assets.reciteFiles).mockReturnValueOnce(files.promise);
+    const started = recite.startMemorising();
+    state.sheet = "talk";
+    files.resolve({ ready: false });
+    await started;
+    expect(state.sheet).toBe("talk");
+    expect(state.recite.phase).toBe("intro");
+  });
+
+  it("never listens under a sheet, even once a session is under way", async () => {
+    void recite.startMemorising();
+    await flush();
+    void recite.toggleListening();
+    expect(state.memorise?.phase).toBe("paused");
+    state.sheet = "talk";
+    await recite.toggleListening();
+    expect(state.memorise?.phase).toBe("paused");
+    expect(captures).toHaveLength(1);
   });
 
   it("leaves a sheet over a page that is not memorised alone", () => {

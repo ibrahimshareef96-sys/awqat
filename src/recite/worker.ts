@@ -5,7 +5,7 @@
  * downloaded model and text, and the runtime shipped inside the app. Every file's SHA-256 is checked before first use.
  */
 // First, before the libraries run: the worker's fetch refuses any other site (the page's policy does not reach here).
-import "./sameOrigin.ts";
+import { ownFile } from "./sameOrigin.ts";
 import { env, pipeline } from "@huggingface/transformers";
 import type { FromWorker, ToWorker } from "./messages.ts";
 import { MODEL_FILES, MODEL_ID } from "./model.ts";
@@ -69,6 +69,11 @@ async function load(message: Extract<ToWorker, { type: "load" }>): Promise<void>
     env.useBrowserCache = false;
     // The runtime is loaded from its own address, never from a blob, which the page's policy refuses.
     env.useWasmCache = false;
+    // ONNX Runtime imports its runtime from these addresses, which the fetch fence never sees: the app's own copy only.
+    const { mjs, wasm: binary } = message.runtime;
+    if (!ownFile(mjs, self.location.href) || !ownFile(binary, self.location.href)) {
+      return post({ type: "failed", why: "model" });
+    }
     const wasm = env.backends.onnx.wasm;
     if (wasm) {
       wasm.wasmPaths = { mjs: message.runtime.mjs, wasm: message.runtime.wasm };

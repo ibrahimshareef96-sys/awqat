@@ -16,6 +16,7 @@ vi.mock("@huggingface/transformers", () => ({
 interface FakeSelf {
   onmessage: ((event: MessageEvent<ToWorker>) => void) | null;
   postMessage: ReturnType<typeof vi.fn>;
+  location: { href: string };
 }
 
 let worker: FakeSelf;
@@ -32,7 +33,7 @@ beforeEach(async () => {
   search.searchRecitation.mockReset();
   asr.pipeline.mockReset();
   asr.pipeline.mockResolvedValue(async () => ({ text: "heard" }));
-  worker = { onmessage: null, postMessage: vi.fn() };
+  worker = { onmessage: null, postMessage: vi.fn(), location: { href: "https://localhost/assets/worker.js" } };
   vi.stubGlobal("self", worker);
   vi.stubGlobal("fetch", vi.fn(async () => new Response("1|1|text")));
   await import("../src/recite/worker.ts");
@@ -78,6 +79,22 @@ describe("the speech worker", () => {
     send(LOAD);
     await flush();
     expect(said()).toEqual([{ type: "failed", why: "model" }]);
+  });
+
+  it("never loads a runtime from another site, which its import() would reach past the fetch fence", async () => {
+    send({ ...LOAD, runtime: { mjs: "https://cdn.example.com/ort.mjs", wasm: "/recite-runtime/a.wasm" } });
+    send({ ...LOAD, runtime: { mjs: "/recite-runtime/a.mjs", wasm: "https://cdn.example.com/ort.wasm" } });
+    await flush();
+    expect(said()).toEqual([{ type: "failed", why: "model" }, { type: "failed", why: "model" }]);
+    expect(asr.pipeline).not.toHaveBeenCalled();
+  });
+
+  it("loads the runtime from the app's own scheme on iOS", async () => {
+    worker.location.href = "capacitor://localhost/assets/worker.js";
+    send({ ...LOAD, runtime: { mjs: "capacitor://localhost/recite-runtime/a.mjs",
+      wasm: "capacitor://localhost/recite-runtime/a.wasm" } });
+    await flush();
+    expect(said()).toEqual([{ type: "ready", checked: true }]);
   });
 
   it("says the files are damaged when one is not the file pinned", async () => {

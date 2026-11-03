@@ -202,7 +202,7 @@ export function memoriseDoneSheet(s: MemoriseSession, lineOf: ReadonlyMap<string
     `<p class="small"${hearing ? ' role="status"' : ""}>${hearing ? "Still hearing your last words…"
       : "They show on the page and among your revision's weak pages."}</p>` : "";
   const pagesName = both ? `pages ${s.pages.join(" and ")}` : `page ${s.page}`;
-  return `<section class="sheet" role="dialog" aria-modal="true" aria-label="Memorise, ${pagesName}"><div class="sheet-inner">` +
+  return `<section class="sheet" role="dialog" aria-modal="true" aria-label="Memorise, ${esc(pagesName)}"><div class="sheet-inner">` +
     `<p class="eyebrow">${esc(pagesName.toUpperCase())} · MEMORISE</p><p class="text"${hearing ? ' aria-busy="true"' : ""}>${esc(head)}</p>` +
     (rows.length ? `<ul class="plain wide">${rows.join("")}</ul>` : "") + keep +
     `<p class="small">It can mishear, most of all in a noisy room. Words are checked, not tajweed.</p>` +

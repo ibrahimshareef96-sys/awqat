@@ -1,7 +1,8 @@
 // The speech worker's own fence: the page's security policy does not reach the worker, so its fetch refuses any web
-// address of another site, whatever transformers.js or ONNX Runtime might default to, and lets the app's own files by.
+// address of another site and lets the app's own files by; ownFile is the same test for the runtime ONNX Runtime
+// imports, which fetch never sees.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sameOriginFetch } from "../src/recite/sameOrigin.ts";
+import { ownFile, sameOriginFetch } from "../src/recite/sameOrigin.ts";
 
 const ANDROID = "https://localhost/assets/worker-abc.js";
 const IOS = "capacitor://localhost/assets/worker-abc.js";
@@ -51,6 +52,22 @@ describe("the speech worker's fetch", () => {
     const init = { method: "HEAD" };
     await fetch("/recite-dev/config.json", init);
     expect(inner).toHaveBeenCalledWith("/recite-dev/config.json", init);
+  });
+});
+
+describe("a file of the app's own", () => {
+  it("is a path, an address on the app's own origin, or no web address at all", () => {
+    expect(ownFile("/recite-runtime/a.mjs", ANDROID)).toBe(true);
+    expect(ownFile("https://localhost/recite-runtime/a.wasm", ANDROID)).toBe(true);
+    expect(ownFile("capacitor://localhost/recite-runtime/a.mjs", IOS)).toBe(true);
+    expect(ownFile("blob:https://localhost/6f1c2a4e-0000-4000-8000-000000000000", ANDROID)).toBe(true);
+  });
+
+  it("is never another site, another scheme of the same host, or an address that does not parse", () => {
+    expect(ownFile("https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/a.mjs", ANDROID)).toBe(false);
+    expect(ownFile("http://localhost/recite-runtime/a.mjs", ANDROID)).toBe(false);
+    expect(ownFile("https://localhost/recite-runtime/a.mjs", IOS)).toBe(false);
+    expect(ownFile("https://[nope", ANDROID)).toBe(false);
   });
 });
 

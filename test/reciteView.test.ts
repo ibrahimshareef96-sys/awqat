@@ -80,6 +80,20 @@ describe("the recite-to-find sheet", () => {
     expect(away).toContain('data-action="recite-again"');
   });
 
+  it("offers to recite again when the speech model failed", () => {
+    const html = reciteSheet(flow({ phase: "problem", problem: "model" }));
+    expect(html).toContain("would not start");
+    expect(html).toContain('data-action="recite-again"');
+  });
+
+  it("names this app, never another, when it went to the background or the microphone is off", () => {
+    const away = reciteSheet(flow({ phase: "problem", problem: "away" }));
+    expect(away).toContain("Listening stopped when Awqat went to the background.");
+    expect(reciteSheet(flow({ phase: "problem", problem: "mic" }))).toContain("Apps, Awqat, Permissions");
+    expect(reciteSheet(flow({ phase: "downloading", progress: 0 }))).toContain("Keep Awqat open");
+    expect(away).not.toContain("Personal OS");
+  });
+
   it("puts focus on the place found, so it is read out first", () => {
     const best = { sura: 18, aya: 10, lastAya: 10, score: 0.97 };
     const html = reciteSheet(flow({ phase: "result", result: { kind: "found", best, same: [] } }));
@@ -106,7 +120,7 @@ describe("the memorise bar", () => {
 
   it("offers the way back when the page was turned", () => {
     expect(memoriseBar(session({ phase: "left" }))).toContain("Back to page 294");
-    expect(memoriseBar(session({ phase: "left", pages: [294, 295] }))).toContain("Back to the pages");
+    expect(memoriseBar(session({ phase: "left", pages: [293, 294] }))).toContain("Back to the pages");
   });
 
   it("says when every word is in", () => {
@@ -127,11 +141,27 @@ describe("the memorise summary", () => {
   });
 
   it("names the page of each slip when two pages were memorised", () => {
-    const two = new Map(WORDS.map((w, i) => [w.key, { page: i < 2 ? 294 : 295, line: 1, word: i + 1 }]));
+    const two = new Map(WORDS.map((w, i) => [w.key, { page: i < 2 ? 293 : 294, line: 1, word: i + 1 }]));
     const m = hearChunk(startMemorise(WORDS), "ذهب الرجل الولد");
-    const html = memoriseDoneSheet(session({ m, pages: [294, 295] }), two);
-    expect(html).toContain("Page 295, line 1, word 3");
-    expect(html).toContain("PAGES 294 AND 295");
+    const html = memoriseDoneSheet(session({ m, pages: [293, 294] }), two);
+    expect(html).toContain("Page 294, line 1, word 3");
+    expect(html).toContain("PAGES 293 AND 294");
+  });
+
+  it("names both pages of a spread in its heading and label, and says when nothing was recited on them", () => {
+    const two = new Map(WORDS.map((w, i) => [w.key, { page: i < 2 ? 293 : 294, line: 1, word: i + 1 }]));
+    const html = memoriseDoneSheet(session({ pages: [293, 294] }), two);
+    expect(html).toContain("PAGES 293 AND 294 · MEMORISE");
+    expect(html).toContain('aria-label="Memorise, pages 293 and 294"');
+    expect(html).toContain("Nothing was recited on these pages yet.");
+  });
+
+  it("names one page without a page on each line", () => {
+    const m = hearChunk(startMemorise(WORDS), "ذهب الرجل الولد");
+    const html = memoriseDoneSheet(session({ m }), at);
+    expect(html).toContain("PAGE 294 · MEMORISE");
+    expect(html).toContain("Line 6, word 3");
+    expect(html).not.toContain("Page 294, line");
   });
 
   it("lists each slip with its line, and lets a mishearing be cleared", () => {
@@ -192,13 +222,29 @@ describe("painting a memorised page", () => {
 
   it("hides the words on both pages of a spread", () => {
     const root = document.createElement("div");
-    root.innerHTML = `<main class="reader"><section data-page="294">` +
-      `<button class="w" data-word="${WORDS[0].key}" aria-label="a">x</button></section><section data-page="295">` +
+    root.innerHTML = `<main class="reader"><section data-page="293">` +
+      `<button class="w" data-word="${WORDS[0].key}" aria-label="a">x</button></section><section data-page="294">` +
       `<button class="w" data-word="${WORDS[3].key}" aria-label="b">x</button></section></main>`;
-    paintMemorise(root, session({ pages: [294, 295] }));
+    paintMemorise(root, session({ pages: [293, 294] }));
     expect(root.querySelectorAll(".m-hid").length).toBe(2);
     paintMemorise(root, session({ pages: [294] }));
     expect(root.querySelectorAll(".m-hid").length).toBe(1);
+  });
+
+  it("hides only the pages memorised, and gives the others their labels back", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<main class="reader"><section data-page="293">` +
+      `<button class="w" data-word="${WORDS[0].key}" aria-label="a">x</button>` +
+      `<button class="w" data-word="${WORDS[1].key}" aria-label="b">x</button></section><section data-page="294">` +
+      `<button class="w" data-word="${WORDS[2].key}" aria-label="c">x</button>` +
+      `<button class="w" data-word="${WORDS[3].key}" aria-label="d">x</button></section></main>`;
+    paintMemorise(root, session({ pages: [293, 294] }));
+    expect(root.querySelectorAll(".m-hid").length).toBe(4);
+    paintMemorise(root, session({ pages: [294] }));
+    expect(root.querySelectorAll('[data-page="293"] .m-hid').length).toBe(0);
+    expect(root.querySelectorAll('[data-page="294"] .m-hid').length).toBe(2);
+    expect(root.querySelector('[data-word="18:10:1"]')?.getAttribute("aria-label")).toBe("a");
+    expect(root.querySelector('[data-word="18:10:1"]')?.hasAttribute("tabindex")).toBe(false);
   });
 
   it("lights an ayah found, and only a well-formed one", () => {
