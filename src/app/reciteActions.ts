@@ -29,6 +29,11 @@ const LIT_MS = 4000;
 let capture: Capture | null = null;
 /** The microphone is being started: on Android its permission prompt pauses the app, which is not going away. */
 let starting = false;
+/**
+ * The app is in the background. A download or a model load that finishes there never opens the microphone: listening
+ * waits until the app is back and the reciter asks again.
+ */
+let away = false;
 let heard: Listening = startListening();
 /** Each start of the microphone gets a number, so a late start or frame from an earlier one is let go. */
 let run = 0;
@@ -60,6 +65,22 @@ function stopMic(): void {
   capture = null;
   starting = false;
   run += 1;
+}
+
+const outOfSight = (): boolean => away || (typeof document !== "undefined" && document.hidden);
+
+/** A page memorised is in view: the open page, or either page of the open spread (a turn lands on either). */
+function inViewOf(s: MemoriseSession): boolean {
+  const shown = mushaf.pagesInView();
+  return s.pages.some((p) => shown.includes(p));
+}
+
+/**
+ * The model could not hear what it was given (it failed on it, or the worker is gone): it is let go, so the next try
+ * loads it afresh, and the reciter is told instead of being asked for more words.
+ */
+function modelFailed(): void {
+  engine.release();
 }
 
 function problemOf(error: unknown): ReciteProblem {
@@ -136,6 +157,7 @@ async function watchDownload(): Promise<void> {
 
 async function listenFind(): Promise<void> {
   stopMic();
+  if (outOfSight()) return setFind({ phase: "problem", problem: "away" });
   const mine = run;
   heard = startListening();
   setFind({ phase: "listening", result: null, problem: null });
@@ -169,13 +191,23 @@ export function stopFind(): void {
 async function finishFind(audio: Float32Array | null): Promise<void> {
   if (phaseNow() !== "listening") return;
   stopMic();
+  // This recitation's number: closing the sheet or reciting again takes a new one, so a late answer is let go.
+  const mine = run;
+  const current = (): boolean => mine === run && state.sheet === "recite" && phaseNow() === "finding";
   if (!audio) return setFind({ phase: "result", result: { kind: "short" } });
   setFind({ phase: "finding" });
   const text = await engine.hear(audio);
+  if (!current()) return;
+  if (text === null) {
+    modelFailed();
+    return setFind({ phase: "problem", problem: "model" });
+  }
   const result = text ? await engine.find(text) : { kind: "short" as const };
-  // Read afresh: the sheet may have closed, or the reciter started again, while the model was hearing.
-  if (state.sheet !== "recite" || phaseNow() !== "finding") return;
-  if (!result) return setFind({ phase: "problem", problem: "model" });
+  if (!current()) return;
+  if (!result) {
+    modelFailed();
+    return setFind({ phase: "problem", problem: "model" });
+  }
   setFind({ phase: "result", result });
 }
 
@@ -243,7 +275,13 @@ async function heardStretch(audio: Float32Array, attempt: number): Promise<void>
   const text = await engine.hear(audio);
   const now = state.memorise;
   if (!now || now.attempt !== attempt) return;
-  state.memorise = { ...now, m: text ? hearChunk(now.m, text) : now.m, working: Math.max(0, now.working - 1) };
+  const working = Math.max(0, now.working - 1);
+  if (text === null) {
+    // The model failed on it: listening stops and says so, rather than filling nothing in without a word.
+    if (now.phase === "listening") stopMic();
+    modelFailed();
+    state.memorise = { ...now, working, problem: "model", phase: now.phase === "listening" ? "paused" : now.phase };
+  } else state.memorise = { ...now, m: text ? hearChunk(now.m, text) : now.m, working };
   hooks.render();
   // The summary drawn while this stretch was being heard is brought up to date.
   if (state.sheet === "memorise-done") hooks.renderOverlay();
@@ -252,7 +290,9 @@ async function heardStretch(audio: Float32Array, attempt: number): Promise<void>
 async function listenMemorise(): Promise<void> {
   const session = state.memorise;
   if (!session) return;
-  if (state.mushafPage !== session.page) return setMemorise({ phase: "left" });
+  if (!inViewOf(session)) return setMemorise({ phase: "left" });
+  // Never under the summary, and never with the app out of sight.
+  if (state.sheet === "memorise-done" || outOfSight()) return setMemorise({ phase: "paused" });
   stopMic();
   const mine = run;
   heard = startListening();
@@ -295,9 +335,15 @@ export async function toggleListening(): Promise<void> {
   if (session.phase === "listening") return pauseMemorise();
   // After a model or file failure, the model is loaded again (and the files checked again) before listening.
   if (!engine.isReady()) {
-    const files = await reciteFiles();
-    if (!files.ready) return openFind("memorise");
     setMemorise({ phase: "preparing", problem: null });
+    const files = await reciteFiles();
+    // Done, a new start or an end may have come while the files were looked for.
+    const waited = state.memorise;
+    if (!waited || waited.attempt !== session.attempt || waited.phase !== "preparing") return;
+    if (!files.ready) {
+      setMemorise({ phase: "paused" });
+      return openFind("memorise");
+    }
     const problem = await ready(files);
     const now = state.memorise;
     if (!now || now.attempt !== session.attempt || now.phase !== "preparing") return;
@@ -343,7 +389,7 @@ export async function keepSlips(): Promise<void> {
 export function memoriseAgain(): void {
   const session = state.memorise;
   if (!session) return;
-  if (state.mushafPage !== session.page) mushaf.turnTo(session.page);
+  if (!inViewOf(session)) mushaf.turnTo(session.page);
   const view = wordsInView();
   if (!view) return;
   attempts += 1;
@@ -374,14 +420,15 @@ export function backToPage(): void {
  */
 export function afterReaderDraw(root: ParentNode): void {
   const session = state.memorise;
+  const shown = session ? inViewOf(session) : false;
   // A change of phase is drawn after this draw has finished, never inside it.
-  if (session && session.page !== state.mushafPage && session.phase !== "left") {
+  if (session && !shown && session.phase !== "left") {
     stopMic();
     state.memorise = { ...session, phase: "left" };
     queueMicrotask(hooks.render);
     return;
   }
-  if (session && session.page === state.mushafPage && session.phase === "left") {
+  if (session && shown && session.phase === "left") {
     state.memorise = { ...session, phase: "paused" };
     queueMicrotask(hooks.render);
     return;
@@ -396,11 +443,18 @@ export function afterReaderDraw(root: ParentNode): void {
  */
 export function appAway(android: boolean): void {
   if (starting && android) return;
+  // Whatever the phase: a download or load still going finishes, but does not start listening (outOfSight).
+  away = true;
   if (state.sheet === "recite" && phaseNow() === "listening") {
     stopMic();
     setFind({ phase: "problem", problem: "away" });
   }
   if (state.memorise?.phase === "listening") pauseMemorise();
+}
+
+/** The app is back in sight: listening may start again, when the reciter asks for it. */
+export function appBack(): void {
+  away = false;
 }
 
 /** The reader closed: the microphone and the speech model are let go, and a memorising is ended. */

@@ -1,7 +1,7 @@
 /**
  * The page's side of the speech worker: starts it when recitation is first used, asks it to hear and to find, and lets
  * it go when the reader closes (the model takes about 150 MB while it is loaded). Every question gets an answer: a
- * worker that fails or is let go settles whatever was waiting on it.
+ * worker that fails, while loading or after, or is let go, settles the load and whatever was waiting on it.
  */
 import type { FromWorker, LoadProblem, ToWorker } from "./messages.ts";
 import type { SearchResult } from "./search.ts";
@@ -13,6 +13,7 @@ let worker: Worker | null = null;
 let loading: Promise<Ready> | null = null;
 /** Settles the load still going, when the worker is let go or fails before it answers. */
 let settleLoad: ((ready: Ready) => void) | null = null;
+/** The model and the text are loaded in the running worker. */
 let loaded = false;
 let nextId = 1;
 const waiting = new Map<number, (message: FromWorker | null) => void>();
@@ -23,18 +24,25 @@ const runtime = (): { mjs: string; wasm: string } => ({
   wasm: new URL("recite-runtime/ort-wasm-simd-threaded.wasm", document.baseURI).href,
 });
 
+/** Asks the loaded worker; null at once when there is none (never loaded, failed, or let go). */
 function ask(message: Exclude<ToWorker, { type: "load" }>, transfer: Transferable[] = []): Promise<FromWorker | null> {
   const running = worker;
   if (!running || !loaded) return Promise.resolve(null);
   return new Promise((resolve) => {
     waiting.set(message.id, resolve);
-    running.postMessage(message, transfer);
+    try {
+      running.postMessage(message, transfer);
+    } catch {
+      waiting.delete(message.id);
+      resolve(null);
+    }
   });
 }
 
 function settleAll(): void {
-  for (const resolve of waiting.values()) resolve(null);
+  const settles = [...waiting.values()];
   waiting.clear();
+  for (const resolve of settles) resolve(null);
 }
 
 /** True once the model and the text are loaded in a worker that is still running. */
@@ -46,9 +54,11 @@ export function prepare(files: Extract<ReciteFiles, { ready: true }>): Promise<R
   const started = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
   worker = started;
   loaded = false;
-  loading = new Promise<Ready>((resolve) => {
+  const pending = new Promise<Ready>((resolve) => {
     settleLoad = resolve;
     started.onmessage = (event: MessageEvent<FromWorker>) => {
+      // A worker already let go says nothing more, so it can never mark a newer one loaded.
+      if (worker !== started) return;
       const message = event.data;
       if (message.type === "ready") {
         loaded = true;
@@ -64,24 +74,30 @@ export function prepare(files: Extract<ReciteFiles, { ready: true }>): Promise<R
       waiting.delete(message.id);
       settle?.(message);
     };
-    // A worker that fails, before or after its load, answers nothing more: everything waiting is settled.
-    started.onerror = () => {
-      resolve({ ok: false, why: "model" });
-      release();
+    // A worker that fails, before or after its load (out of memory, say), answers nothing more: the load and
+    // everything waiting are settled now, and the next try starts afresh.
+    const failed = (): void => {
+      if (worker === started) release();
     };
+    started.onerror = failed;
+    started.onmessageerror = failed;
   });
+  loading = pending;
   const load: ToWorker = { type: "load", base: files.base, tanzil: files.tanzil, runtime: runtime(), checked: files.checked };
   started.postMessage(load);
   // A failed load leaves nothing running: the next try starts afresh.
-  void loading.then((ready) => { if (!ready.ok) release(); });
-  return loading;
+  void pending.then((ready) => { if (!ready.ok && worker === started) release(); });
+  return pending;
 }
 
-/** What the model heard in a stretch of 16 kHz sound; "" when it heard nothing or failed. */
-export async function hear(audio: Float32Array): Promise<string> {
+/**
+ * What the model heard in a stretch of 16 kHz sound: "" when it heard no words, null when it could not hear at all
+ * (no model loaded, the worker gone, or the model failing on it), so a failure is never taken for silence.
+ */
+export async function hear(audio: Float32Array): Promise<string | null> {
   const id = nextId++;
   const answer = await ask({ type: "hear", id, audio }, [audio.buffer]);
-  return answer?.type === "heard" ? answer.text : "";
+  return answer?.type === "heard" ? answer.text : null;
 }
 
 /** Which ayah the words belong to; null when the worker is gone or could not search. */
@@ -97,7 +113,8 @@ export function release(): void {
   worker = null;
   loaded = false;
   loading = null;
-  settleLoad?.({ ok: false, why: "model" });
+  const settle = settleLoad;
   settleLoad = null;
+  settle?.({ ok: false, why: "model" });
   settleAll();
 }

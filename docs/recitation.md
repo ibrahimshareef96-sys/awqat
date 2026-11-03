@@ -51,7 +51,10 @@ slower.
 - No audio leaves the phone. The page's security policy lets it reach no new site: the files are read by a
   same-origin path (Capacitor's file server), and `'wasm-unsafe-eval'` is the only change to the policy.
 - The microphone is open only while the sheet says "Listening" or the memorise bar shows the listening button; turning
-  the page away, closing the sheet or leaving the reader stops it.
+  the page away, closing the sheet, leaving the reader or sending the app to the background stops it. A download or a
+  model load that finishes while the app is in the background never opens it: the sheet says listening stopped, and
+  the reciter taps Recite again. (Android's own microphone prompt pauses the app too; that one is left to finish.)
+- A model that fails on what it was given is let go and named as the problem, never taken for "a few more words".
 
 ## Files
 

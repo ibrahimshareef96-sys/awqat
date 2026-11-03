@@ -1083,6 +1083,7 @@ function onResume(): void {
   // A finger lifted while the app was away never sent its pointerup.
   resetHands();
   resetHold();
+  recite.appBack();
   // A page that needed the internet may find it now; words kept past their 7 days go.
   if (state.screen === "mushaf") mushaf.retry();
   else render();
@@ -1217,7 +1218,7 @@ async function boot(): Promise<void> {
     if (document.hidden) {
       flushFields();
       recite.appAway(platform() === "android");
-    }
+    } else recite.appBack();
   });
   setInterval(tick, TICK_MS);
   if (isNative()) {

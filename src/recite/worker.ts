@@ -101,9 +101,17 @@ async function handle(message: ToWorker): Promise<void> {
   }
 }
 
+/** Says a message failed, so the page never waits on it; if even that cannot be said, the queue still goes on. */
+function answerFailure(message: ToWorker): void {
+  try {
+    post(message.type === "load" ? { type: "failed", why: "model" } : { type: "error", id: message.id });
+  } catch {
+    // Nothing more can reach the page for this message; the next one is still handled.
+  }
+}
+
 self.onmessage = (event: MessageEvent<ToWorker>) => {
   const message = event.data;
   // Whatever goes wrong, the page gets an answer, so nothing it waits on hangs.
-  queue = queue.then(() => handle(message)).catch(() =>
-    post(message.type === "load" ? { type: "failed", why: "model" } : { type: "error", id: message.id }));
+  queue = queue.then(() => handle(message)).catch(() => answerFailure(message));
 };

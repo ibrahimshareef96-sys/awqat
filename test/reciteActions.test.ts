@@ -84,6 +84,7 @@ beforeEach(() => {
   state.memorise = null;
   state.mushafPage = 294;
   state.notice = "";
+  recite.appBack();
 });
 
 afterEach(() => {
@@ -150,6 +151,41 @@ describe("recite to find", () => {
     await flush();
     expect(state.recite.phase).toBe("intro");
     expect(state.recite.result).toBeNull();
+  });
+
+  it("says the model failed, and lets it go, when it could not hear", async () => {
+    vi.mocked(engine.hear).mockResolvedValue(null);
+    void recite.openFind();
+    await flush();
+    for (let i = 0; i < 8; i++) sendFrame(loud());
+    recite.stopFind();
+    await flush();
+    expect(state.recite).toMatchObject({ phase: "problem", problem: "model" });
+    expect(engine.find).not.toHaveBeenCalled();
+    expect(engine.release).toHaveBeenCalled();
+  });
+
+  it("shows each recitation its own answer, never a slow one from before", async () => {
+    const first = deferred<string | null>();
+    vi.mocked(engine.hear).mockReturnValueOnce(first.promise);
+    void recite.openFind();
+    await flush();
+    for (let i = 0; i < 8; i++) sendFrame(loud());
+    recite.stopFind();
+    await flush();
+    state.sheet = null;
+    recite.sheetClosed();
+    const other = { ...FOUND, best: { sura: 2, aya: 3, lastAya: 3, score: 0.9 } };
+    vi.mocked(engine.find).mockResolvedValueOnce(other);
+    void recite.openFind();
+    await flush();
+    for (let i = 0; i < 8; i++) sendFrame(loud());
+    recite.stopFind();
+    await flush();
+    expect(state.recite.result).toEqual(other);
+    first.resolve("old words");
+    await flush();
+    expect(state.recite.result).toEqual(other);
   });
 
   it("says the model failed when the worker could not search", async () => {
@@ -260,6 +296,50 @@ describe("the app going to the background", () => {
     expect(state.recite.problem).toBe("away");
   });
 
+  it("never opens the microphone when a load finishes with the app away", async () => {
+    const loaded = deferred<{ ok: true }>();
+    vi.mocked(engine.prepare).mockReturnValueOnce(loaded.promise);
+    void recite.openFind();
+    await flush();
+    expect(state.recite.phase).toBe("preparing");
+    recite.appAway(false);
+    loaded.resolve({ ok: true });
+    await flush();
+    expect(mic.startCapture).not.toHaveBeenCalled();
+    expect(state.recite).toMatchObject({ phase: "problem", problem: "away" });
+    recite.appBack();
+    recite.again();
+    await flush();
+    expect(state.recite.phase).toBe("listening");
+  });
+
+  it("never opens the microphone when a download finishes with the app away", async () => {
+    const done = deferred<{ ok: true }>();
+    vi.mocked(assets.downloadReciteFiles).mockReturnValue(done.promise);
+    vi.mocked(assets.reciteFiles).mockResolvedValueOnce({ ready: false });
+    await recite.openFind();
+    void recite.download();
+    recite.appAway(true);
+    done.resolve({ ok: true });
+    await flush();
+    expect(mic.startCapture).not.toHaveBeenCalled();
+    expect(state.recite.problem).toBe("away");
+    recite.appBack();
+  });
+
+  it("never starts memorising with the app away", async () => {
+    const loaded = deferred<{ ok: true }>();
+    vi.mocked(engine.prepare).mockReturnValueOnce(loaded.promise);
+    void recite.startMemorising();
+    await flush();
+    recite.appAway(false);
+    loaded.resolve({ ok: true });
+    await flush();
+    expect(mic.startCapture).not.toHaveBeenCalled();
+    expect(state.memorise?.phase).toBe("paused");
+    recite.appBack();
+  });
+
   it("pauses a page being memorised", async () => {
     void recite.startMemorising();
     await flush();
@@ -333,6 +413,7 @@ describe("memorising a page", () => {
     void recite.startMemorising();
     await flush();
     state.mushafPage = 300;
+    vi.mocked(mushaf.pagesInView).mockReturnValue([300]);
     recite.afterReaderDraw(document);
     expect(state.memorise?.phase).toBe("left");
     expect(captures[0].stop).toHaveBeenCalled();
@@ -360,6 +441,43 @@ describe("memorising a page", () => {
 
     await recite.keepSlips();
     expect(state.memorise).toBeNull();
+  });
+
+  it("counts a spread as in view whichever of its pages is open", async () => {
+    vi.mocked(mushaf.pagesInView).mockReturnValue([294, 295]);
+    void recite.startMemorising();
+    await flush();
+    // A turn back to the spread lands on its other page: still the pages memorised.
+    state.mushafPage = 295;
+    recite.afterReaderDraw(document);
+    expect(state.memorise?.phase).toBe("listening");
+  });
+
+  it("does not listen under the summary when Done comes while the files are looked for", async () => {
+    vi.mocked(engine.prepare).mockResolvedValueOnce({ ok: false, why: "model" });
+    await recite.startMemorising();
+    vi.mocked(engine.isReady).mockReturnValue(false);
+    const files = deferred<typeof READY>();
+    vi.mocked(assets.reciteFiles).mockReturnValueOnce(files.promise);
+    const toggled = recite.toggleListening();
+    recite.finishMemorising();
+    files.resolve(READY);
+    await toggled;
+    await flush();
+    expect(state.sheet).toBe("memorise-done");
+    expect(state.memorise?.phase).toBe("paused");
+    expect(mic.startCapture).not.toHaveBeenCalled();
+  });
+
+  it("stops and says the model failed when it could not hear a stretch", async () => {
+    vi.mocked(engine.hear).mockResolvedValueOnce(null);
+    void recite.startMemorising();
+    await flush();
+    recitePhrase();
+    await flush();
+    expect(state.memorise).toMatchObject({ phase: "paused", problem: "model", working: 0 });
+    expect(captures[0].stop).toHaveBeenCalled();
+    expect(engine.release).toHaveBeenCalled();
   });
 
   it("loads the model again before listening after a failure", async () => {
