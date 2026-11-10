@@ -43,7 +43,7 @@ build, and the iOS app and widgets extension built for a simulator in Xcode or w
 | `src/app/state.ts` | The one state object, `save()`, and `hooks` (render, overlay, sheets) that actions call |
 | `src/app/*Actions.ts` | What a tap does: change state immutably, save, call `hooks.render()` |
 | `src/ui/*View.ts` | Screens and sheets as HTML strings. Every value through `esc()`. No inline styles (the policy forbids them): widths come from `data-w`, painting in place uses the CSSOM |
-| `src/prayer`, `src/quran`, `src/faith`, `src/recite`, `src/review`, `src/agenda`, `src/body`, `src/money`, `src/learn`, `src/books` | Pure logic per area, each with tests in `test/` |
+| `src/prayer`, `src/quran`, `src/faith`, `src/recite`, `src/review`, `src/agenda`, `src/body`, `src/food`, `src/money`, `src/learn`, `src/books` | Pure logic per area, each with tests in `test/` |
 | `src/recite/` | Recitation: see docs/recitation.md |
 | `src/talk/`, `src/sync/`, `src/feeds/` | The optional backend: see docs/backend.md |
 | `android/app/src/main/java/app/awqat/` | Widgets, Live Updates, the bridges the page calls |

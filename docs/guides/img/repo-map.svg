@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="640" viewBox="0 0 800 640" role="img" aria-labelledby="rm-title rm-desc">
+  <title id="rm-title">Where files live in the Awqat repository</title>
+  <desc id="rm-desc">A list of the main folders and files. src holds the app in TypeScript, test holds the tests, public holds files shipped as they are, dist is made by the build, android is the Android project, ios/App is the Xcode project, brand holds the icon and banner, scripts holds Python generators, docs holds the guides, and AGENTS.md, capacitor.config.ts and package.json sit at the top.</desc>
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F2ECE4; }
+    .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #F2ECE4; }
+    .dim { fill: #B5AEA6; }
+    .row { fill: #17151B; }
+  </style>
+  <rect width="800" height="640" fill="#0B0A0D"/>
+
+  <text class="t" x="24" y="46" font-size="26" font-weight="600">Where files live</text>
+
+  <!-- legend -->
+  <rect x="24" y="66" width="14" height="14" fill="#F5D3A1"/>
+  <text class="t dim" x="46" y="79" font-size="15">the web app</text>
+  <rect x="160" y="66" width="14" height="14" fill="#F4664F"/>
+  <text class="t dim" x="182" y="79" font-size="15">the phone shells</text>
+  <rect x="330" y="66" width="14" height="14" fill="#9B3FA0"/>
+  <text class="t dim" x="352" y="79" font-size="15">words, pictures and settings</text>
+
+  <!-- rows: 42 high, 4 gap -->
+  <g>
+    <rect class="row" x="24" y="98" width="752" height="40"/>
+    <rect x="24" y="98" width="8" height="40" fill="#F5D3A1"/>
+    <text class="m" x="46" y="124" font-size="16" font-weight="700">src/</text>
+    <text class="t" x="270" y="124" font-size="15">The app itself, in TypeScript. Screens, taps, prayer logic.</text>
+
+    <rect class="row" x="24" y="142" width="752" height="40"/>
+    <rect x="24" y="142" width="8" height="40" fill="#F5D3A1"/>
+    <text class="m" x="46" y="168" font-size="16" font-weight="700">test/</text>
+    <text class="t" x="270" y="168" font-size="15">The tests. npm test runs them all.</text>
+
+    <rect class="row" x="24" y="186" width="752" height="40"/>
+    <rect x="24" y="186" width="8" height="40" fill="#F5D3A1"/>
+    <text class="m" x="46" y="212" font-size="16" font-weight="700">public/</text>
+    <text class="t" x="270" y="212" font-size="15">Files shipped as they are: fonts, skies, the privacy page.</text>
+
+    <rect class="row" x="24" y="230" width="752" height="40"/>
+    <rect x="24" y="230" width="8" height="40" fill="#F5D3A1"/>
+    <text class="m" x="46" y="256" font-size="16" font-weight="700">dist/</text>
+    <text class="t" x="270" y="256" font-size="15">Made by npm run build. Never edit it, never commit it.</text>
+
+    <rect class="row" x="24" y="274" width="752" height="40"/>
+    <rect x="24" y="274" width="8" height="40" fill="#F4664F"/>
+    <text class="m" x="46" y="300" font-size="16" font-weight="700">android/</text>
+    <text class="t" x="270" y="300" font-size="15">The Android project. Open it in Android Studio.</text>
+
+    <rect class="row" x="24" y="318" width="752" height="40"/>
+    <rect x="24" y="318" width="8" height="40" fill="#F4664F"/>
+    <text class="m" x="46" y="344" font-size="16" font-weight="700">ios/App/</text>
+    <text class="t" x="270" y="344" font-size="15">The Xcode project for iPhone and iPad, with the widgets.</text>
+
+    <rect class="row" x="24" y="362" width="752" height="40"/>
+    <rect x="24" y="362" width="8" height="40" fill="#9B3FA0"/>
+    <text class="m" x="46" y="388" font-size="16" font-weight="700">brand/</text>
+    <text class="t" x="270" y="388" font-size="15">The mark, the icon and the banner.</text>
+
+    <rect class="row" x="24" y="406" width="752" height="40"/>
+    <rect x="24" y="406" width="8" height="40" fill="#9B3FA0"/>
+    <text class="m" x="46" y="432" font-size="16" font-weight="700">scripts/</text>
+    <text class="t" x="270" y="432" font-size="15">Python scripts that draw icons and make data files.</text>
+
+    <rect class="row" x="24" y="450" width="752" height="40"/>
+    <rect x="24" y="450" width="8" height="40" fill="#9B3FA0"/>
+    <text class="m" x="46" y="476" font-size="16" font-weight="700">docs/</text>
+    <text class="t" x="270" y="476" font-size="15">How things work. These guides are in docs/guides/.</text>
+
+    <rect class="row" x="24" y="494" width="752" height="40"/>
+    <rect x="24" y="494" width="8" height="40" fill="#9B3FA0"/>
+    <text class="m" x="46" y="520" font-size="16" font-weight="700">AGENTS.md</text>
+    <text class="t" x="270" y="520" font-size="15">The rules for changing the app. Read by people and agents.</text>
+
+    <rect class="row" x="24" y="538" width="752" height="40"/>
+    <rect x="24" y="538" width="8" height="40" fill="#9B3FA0"/>
+    <text class="m" x="46" y="564" font-size="16" font-weight="700">capacitor.config.ts</text>
+    <text class="t" x="270" y="564" font-size="15">The app's name and its app id.</text>
+
+    <rect class="row" x="24" y="582" width="752" height="40"/>
+    <rect x="24" y="582" width="8" height="40" fill="#9B3FA0"/>
+    <text class="m" x="46" y="608" font-size="16" font-weight="700">package.json</text>
+    <text class="t" x="270" y="608" font-size="15">The commands you type: npm test, npm run build, npm run apk.</text>
+  </g>
+</svg>

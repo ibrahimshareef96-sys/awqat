@@ -82,7 +82,15 @@ async function removeTempFile(uri: string): Promise<void> {
 }
 
 /** Takes or chooses a photo and keeps it in the app's data folder; returns its name ("covers/<id>.jpg") or null. */
-export async function coverPhoto(from: "camera" | "gallery"): Promise<string | null> {
+export function coverPhoto(from: "camera" | "gallery"): Promise<string | null> {
+  return keepPhoto(from, newName());
+}
+
+/**
+ * Takes or chooses a photo, redraws it (so the camera's location and details are gone) and keeps it under `name` in
+ * the app's data folder; returns the name, or null when there is no photo. Books' covers and Food's meals use it.
+ */
+export async function keepPhoto(from: "camera" | "gallery", name: string): Promise<string | null> {
   try {
     const options = { quality: 82, targetWidth: COVER_WIDTH, targetHeight: COVER_HEIGHT, correctOrientation: true };
     const media = from === "camera"
@@ -94,7 +102,6 @@ export async function coverPhoto(from: "camera" | "gallery"): Promise<string | n
     const original = typeof file.data === "string" ? file.data : await blobToBase64(file.data);
     const data = await redrawAsCover(original);
     if (!data) return null;
-    const name = newName();
     await Filesystem.writeFile({ path: name, directory: Directory.Data, data, recursive: true });
     return name;
   } catch {
@@ -192,8 +199,8 @@ export function photoSrc(name: string | null): string | null {
 /** The folder the mushaf's page fonts are kept in (the 1421 print's, quran/mushafFiles.ts). */
 export const MUSHAF_FONTS_DIR = "mushaf-1421-fonts";
 
-/** Only these files in the data folder are ever given an address: covers and mushaf page fonts. */
-const SERVED = new RegExp(`^(covers/[A-Za-z0-9-]{1,64}\\.jpg|${MUSHAF_FONTS_DIR}/p\\d{1,3}\\.woff2)$`);
+/** Only these files in the data folder are ever given an address: covers, meal photos and mushaf page fonts. */
+const SERVED = new RegExp(`^((?:covers|meals)/[A-Za-z0-9-]{1,64}\\.jpg|${MUSHAF_FONTS_DIR}/p\\d{1,3}\\.woff2)$`);
 
 /** The same-origin address of a kept file (a cover, or a page font), or null before its folder is known. */
 export function dataFileSrc(path: string): string | null {

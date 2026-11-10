@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="430" viewBox="0 0 800 430" role="img" aria-labelledby="ag-title ag-desc">
+  <title id="ag-title">How the app and its widgets share data through the App Group</title>
+  <desc id="ag-desc">Three boxes in a row. The App target, with bundle id app.awqat, writes into the App Group named group.app.awqat. The PersonalOSWidgets target, with bundle id app.awqat.widgets, reads from it. Below, the three files that name the group: App.entitlements, PersonalOSWidgets.entitlements and SharedStore.swift.</desc>
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F2ECE4; }
+    .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #F5D3A1; }
+    .dim { fill: #B5AEA6; }
+    .box { fill: #17151B; stroke: #3A3540; stroke-width: 2; }
+    .line { fill: none; stroke: #B5AEA6; stroke-width: 2; }
+  </style>
+  <defs>
+    <marker id="ag-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#B5AEA6"/>
+    </marker>
+  </defs>
+  <rect width="800" height="430" fill="#0B0A0D"/>
+
+  <text class="t" x="24" y="46" font-size="26" font-weight="600">The App Group: one shared drawer</text>
+  <text class="t dim" x="24" y="74" font-size="16">The app puts today's times in. The widgets take them out.</text>
+
+  <rect class="box" x="24" y="98" width="216" height="130"/>
+  <rect x="24" y="98" width="216" height="8" fill="#F5D3A1"/>
+  <text class="t" x="40" y="138" font-size="19" font-weight="600">The app</text>
+  <text class="t dim" x="40" y="164" font-size="15">Target: App</text>
+  <text class="m" x="40" y="200" font-size="15">app.awqat</text>
+
+  <path class="line" d="M240 163 H286" marker-end="url(#ag-arrow)"/>
+  <text class="t dim" x="264" y="150" font-size="14" text-anchor="middle">writes</text>
+
+  <rect x="292" y="98" width="216" height="130" fill="#17151B" stroke="#EF3A78" stroke-width="2"/>
+  <rect x="292" y="98" width="216" height="8" fill="#EF3A78"/>
+  <text class="t" x="308" y="138" font-size="19" font-weight="600">The App Group</text>
+  <text class="t dim" x="308" y="164" font-size="15">Shared storage</text>
+  <text class="m" x="308" y="200" font-size="15">group.app.awqat</text>
+
+  <path class="line" d="M508 163 H554" marker-end="url(#ag-arrow)"/>
+  <text class="t dim" x="532" y="150" font-size="14" text-anchor="middle">reads</text>
+
+  <rect class="box" x="560" y="98" width="216" height="130"/>
+  <rect x="560" y="98" width="216" height="8" fill="#9B3FA0"/>
+  <text class="t" x="576" y="138" font-size="19" font-weight="600">The widgets</text>
+  <text class="t dim" x="576" y="164" font-size="15">Target: PersonalOSWidgets</text>
+  <text class="m" x="576" y="200" font-size="15">app.awqat.widgets</text>
+
+  <text class="t" x="24" y="272" font-size="17" font-weight="600">If you rename the group, rename it in all three places</text>
+  <rect x="24" y="290" width="8" height="32" fill="#EF3A78"/>
+  <text class="m" x="46" y="311" font-size="15" style="fill:#F2ECE4">ios/App/App/App.entitlements</text>
+  <rect x="24" y="330" width="8" height="32" fill="#EF3A78"/>
+  <text class="m" x="46" y="351" font-size="15" style="fill:#F2ECE4">ios/App/PersonalOSWidgets/PersonalOSWidgets.entitlements</text>
+  <rect x="24" y="370" width="8" height="32" fill="#EF3A78"/>
+  <text class="m" x="46" y="391" font-size="15" style="fill:#F2ECE4">ios/App/PersonalOSWidgets/Shared/SharedStore.swift</text>
+</svg>

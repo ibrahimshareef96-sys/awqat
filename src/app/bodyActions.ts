@@ -10,6 +10,7 @@ import { addLift, parseStepGoal, removeLift, setPlan, setStepGoal, STEP_GOAL_MAX
 import { isNative } from "../device.ts";
 import { KEYS } from "../store.ts";
 import type { BodyModel } from "../ui/bodyView.ts";
+import { foodModel } from "./foodActions.ts";
 import { WORKOUT_TIMER } from "./live.ts";
 import { busyWhile, hooks, save, setNotice, state, today } from "./state.ts";
 
@@ -40,6 +41,7 @@ export function bodyModel(now: Date): BodyModel {
     readAt: state.health.readAt, reading: state.health.reading, platform: Capacitor.getPlatform(), tz: state.place.tz,
     today: today(), now: now.getTime(), busy: state.busy, removeArmed: state.weightRemoveArmed, liftArmed: state.liftRemoveArmed,
     workoutSince: state.modes.timer?.trackId === WORKOUT_TIMER ? state.modes.timer.startedAt : null,
+    food: foodModel(),
   };
 }
 

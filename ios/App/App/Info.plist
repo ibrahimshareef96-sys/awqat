@@ -39,7 +39,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>To scan a book's barcode and photograph its cover. The photo stays on this device.</string>
+	<string>To scan the barcode of a book or a food packet, and to photograph a book's cover or a meal. Photos stay on this device.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Body shows your weight, steps, sleep and workouts from Apple Health. They are only read; today's step count is kept for the widget on this device, and they leave it only if you turn on Health in talks.</string>
 	<!-- The health plugin carries code that can ask to write; the app never does, so the text says so. -->

@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="470" viewBox="0 0 800 470" role="img" aria-labelledby="ud-title ud-desc">
+  <title id="ud-title">Turning on USB debugging on an Android phone, in four screens</title>
+  <desc id="ud-desc">Four phone sketches. One, open Settings and tap About phone. Two, tap Build number seven times until the phone says you are now a developer. Three, open Developer options and turn on USB debugging. Four, plug the phone into the computer and tap Allow on the question Allow USB debugging.</desc>
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F2ECE4; }
+    .n { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0B0A0D; }
+    .dim { fill: #B5AEA6; }
+    .phone { fill: #17151B; stroke: #F2ECE4; stroke-width: 2; }
+    .rowbg { fill: #26222C; }
+    .line { fill: none; stroke: #B5AEA6; stroke-width: 2; }
+  </style>
+  <defs>
+    <marker id="ud-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#B5AEA6"/>
+    </marker>
+  </defs>
+  <rect width="800" height="470" fill="#0B0A0D"/>
+
+  <text class="t" x="24" y="46" font-size="26" font-weight="600">Turn on USB debugging</text>
+  <text class="t dim" x="24" y="74" font-size="16">Once per phone. The words differ a little between phone makers.</text>
+
+  <!-- phone 1 -->
+  <rect class="phone" x="24" y="98" width="170" height="250"/>
+  <text class="t" x="38" y="128" font-size="16" font-weight="700">Settings</text>
+  <rect class="rowbg" x="36" y="144" width="146" height="30"/>
+  <text class="t dim" x="46" y="164" font-size="14">Display</text>
+  <rect class="rowbg" x="36" y="180" width="146" height="30"/>
+  <text class="t dim" x="46" y="200" font-size="14">Battery</text>
+  <rect class="rowbg" x="36" y="216" width="146" height="30"/>
+  <text class="t dim" x="46" y="236" font-size="14">System</text>
+  <rect x="36" y="252" width="146" height="34" fill="#17151B" stroke="#F89A5B" stroke-width="3"/>
+  <text class="t" x="46" y="274" font-size="15" font-weight="600">About phone</text>
+
+  <!-- phone 2 -->
+  <rect class="phone" x="218" y="98" width="170" height="250"/>
+  <text class="t" x="232" y="128" font-size="16" font-weight="700">About phone</text>
+  <rect class="rowbg" x="230" y="144" width="146" height="30"/>
+  <text class="t dim" x="240" y="164" font-size="14">Model</text>
+  <rect x="230" y="180" width="146" height="34" fill="#17151B" stroke="#F89A5B" stroke-width="3"/>
+  <text class="t" x="240" y="202" font-size="15" font-weight="600">Build number</text>
+  <rect x="262" y="224" width="114" height="28" fill="#F89A5B"/>
+  <text class="t" x="319" y="243" font-size="14" font-weight="700" text-anchor="middle" style="fill:#0B0A0D">tap 7 times</text>
+  <rect x="230" y="282" width="146" height="50" fill="#F2ECE4"/>
+  <text class="t" x="303" y="303" font-size="14" text-anchor="middle" style="fill:#0B0A0D">You are now</text>
+  <text class="t" x="303" y="322" font-size="14" text-anchor="middle" style="fill:#0B0A0D">a developer</text>
+
+  <!-- phone 3 -->
+  <rect class="phone" x="412" y="98" width="170" height="250"/>
+  <text class="t" x="426" y="124" font-size="15" font-weight="700">Developer</text>
+  <text class="t" x="426" y="142" font-size="15" font-weight="700">options</text>
+  <rect class="rowbg" x="424" y="156" width="146" height="30"/>
+  <text class="t dim" x="434" y="176" font-size="14">Stay awake</text>
+  <rect x="424" y="192" width="146" height="62" fill="#17151B" stroke="#F4664F" stroke-width="3"/>
+  <text class="t" x="434" y="214" font-size="15" font-weight="600">USB debugging</text>
+  <rect x="434" y="224" width="44" height="20" fill="#F4664F"/>
+  <rect x="460" y="226" width="16" height="16" fill="#F2ECE4"/>
+  <text class="t" x="488" y="240" font-size="14">On</text>
+  <rect class="rowbg" x="424" y="260" width="146" height="30"/>
+  <text class="t dim" x="434" y="280" font-size="14">Wireless debugging</text>
+
+  <!-- phone 4 -->
+  <rect class="phone" x="606" y="98" width="170" height="250"/>
+  <rect x="618" y="150" width="146" height="140" fill="#26222C" stroke="#EF3A78" stroke-width="3"/>
+  <text class="t" x="691" y="182" font-size="15" font-weight="700" text-anchor="middle">Allow USB</text>
+  <text class="t" x="691" y="202" font-size="15" font-weight="700" text-anchor="middle">debugging?</text>
+  <text class="t dim" x="654" y="266" font-size="14" text-anchor="middle">Cancel</text>
+  <rect x="692" y="244" width="62" height="34" fill="#EF3A78"/>
+  <text class="t" x="723" y="266" font-size="15" font-weight="700" text-anchor="middle" style="fill:#0B0A0D">Allow</text>
+  <!-- cable -->
+  <path class="line" d="M691 348 V360"/>
+
+  <!-- arrows between phones -->
+  <path class="line" d="M196 222 H214" marker-end="url(#ud-arrow)"/>
+  <path class="line" d="M390 222 H408" marker-end="url(#ud-arrow)"/>
+  <path class="line" d="M584 222 H602" marker-end="url(#ud-arrow)"/>
+
+  <!-- captions -->
+  <rect x="24" y="372" width="28" height="28" fill="#F5D3A1"/>
+  <text class="n" x="38" y="392" font-size="16" font-weight="700" text-anchor="middle">1</text>
+  <text class="t" x="24" y="424" font-size="15">Open Settings.</text>
+  <text class="t" x="24" y="446" font-size="15">Tap About phone.</text>
+
+  <rect x="218" y="372" width="28" height="28" fill="#F89A5B"/>
+  <text class="n" x="232" y="392" font-size="16" font-weight="700" text-anchor="middle">2</text>
+  <text class="t" x="218" y="424" font-size="15">Tap Build number</text>
+  <text class="t" x="218" y="446" font-size="15">seven times.</text>
+
+  <rect x="412" y="372" width="28" height="28" fill="#F4664F"/>
+  <text class="n" x="426" y="392" font-size="16" font-weight="700" text-anchor="middle">3</text>
+  <text class="t" x="412" y="424" font-size="15">In Developer options,</text>
+  <text class="t" x="412" y="446" font-size="15">turn it on.</text>
+
+  <rect x="606" y="372" width="28" height="28" fill="#EF3A78"/>
+  <text class="n" x="620" y="392" font-size="16" font-weight="700" text-anchor="middle">4</text>
+  <text class="t" x="606" y="424" font-size="15">Plug in the cable.</text>
+  <text class="t" x="606" y="446" font-size="15">Tap Allow.</text>
+</svg>

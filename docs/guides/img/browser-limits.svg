@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="430" viewBox="0 0 800 430" role="img" aria-labelledby="bl-title bl-desc">
+  <title id="bl-title">What the browser build can and cannot do</title>
+  <desc id="bl-desc">Two columns. In a browser you get Home, prayer times for Makkah or coordinates you type, adhkar and the tasbih counter, the prayer log, Learn, Books typed by hand, Money and the Weekly Review. Only the installed phone app has the mushaf pages, recitation, health data, calendars, the barcode scanner and camera, reminders, widgets and the lock screen.</desc>
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F2ECE4; }
+    .dim { fill: #B5AEA6; }
+    .box { fill: #17151B; stroke-width: 2; }
+  </style>
+  <rect width="800" height="430" fill="#0B0A0D"/>
+
+  <text class="t" x="24" y="46" font-size="26" font-weight="600">Browser or phone</text>
+  <text class="t dim" x="24" y="74" font-size="16">The browser is for a first look. The phone app is the real thing.</text>
+
+  <rect class="box" x="24" y="98" width="366" height="308" stroke="#F5D3A1"/>
+  <rect x="24" y="98" width="366" height="44" fill="#F5D3A1"/>
+  <text class="t" x="40" y="127" font-size="18" font-weight="700" style="fill:#0B0A0D">Works in a browser</text>
+  <g font-size="16">
+    <rect x="40" y="162" width="12" height="12" fill="#F5D3A1"/><text class="t" x="64" y="174">Home and its cards</text>
+    <rect x="40" y="192" width="12" height="12" fill="#F5D3A1"/><text class="t" x="64" y="204">Prayer times (Makkah to start)</text>
+    <rect x="40" y="222" width="12" height="12" fill="#F5D3A1"/><text class="t" x="64" y="234">Adhkar lists and the tasbih counter</text>
+    <rect x="40" y="252" width="12" height="12" fill="#F5D3A1"/><text class="t" x="64" y="264">The prayer log</text>
+    <rect x="40" y="282" width="12" height="12" fill="#F5D3A1"/><text class="t" x="64" y="294">Learn, Money, the Weekly Review</text>
+    <rect x="40" y="312" width="12" height="12" fill="#F5D3A1"/><text class="t" x="64" y="324">Books you type in by hand</text>
+  </g>
+  <text class="t dim" x="40" y="380" font-size="15">Saved in this browser only.</text>
+
+  <rect class="box" x="410" y="98" width="366" height="308" stroke="#EF3A78"/>
+  <rect x="410" y="98" width="366" height="44" fill="#EF3A78"/>
+  <text class="t" x="426" y="127" font-size="18" font-weight="700" style="fill:#0B0A0D">Needs the phone app</text>
+  <g font-size="16">
+    <rect x="426" y="162" width="12" height="12" fill="#EF3A78"/><text class="t" x="450" y="174">The mushaf's pages</text>
+    <rect x="426" y="192" width="12" height="12" fill="#EF3A78"/><text class="t" x="450" y="204">Recitation and its 45 MB download</text>
+    <rect x="426" y="222" width="12" height="12" fill="#EF3A78"/><text class="t" x="450" y="234">Health data (steps, sleep, weight)</text>
+    <rect x="426" y="252" width="12" height="12" fill="#EF3A78"/><text class="t" x="450" y="264">Your calendars</text>
+    <rect x="426" y="282" width="12" height="12" fill="#EF3A78"/><text class="t" x="450" y="294">Barcode scanner and camera</text>
+    <rect x="426" y="312" width="12" height="12" fill="#EF3A78"/><text class="t" x="450" y="324">Prayer reminders</text>
+    <rect x="426" y="342" width="12" height="12" fill="#EF3A78"/><text class="t" x="450" y="354">Widgets and the lock screen</text>
+  </g>
+  <text class="t dim" x="426" y="388" font-size="15">Guide 02 or 03 gets you there.</text>
+</svg>

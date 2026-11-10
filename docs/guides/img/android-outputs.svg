@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420" role="img" aria-labelledby="ao-title ao-desc">
+  <title id="ao-title">Where the Android build puts its files, and where your signing key goes</title>
+  <desc id="ao-desc">A tree of the android folder. keystore.properties sits in android and is written by you. Your key file, for example my-release.jks, sits in android/app. Both are never committed. The debug APK lands in android/app/build/outputs/apk/debug/app-debug.apk. The release APK lands in android/app/build/outputs/apk/release. The release bundle lands in android/app/build/outputs/bundle/release.</desc>
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F2ECE4; }
+    .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #F2ECE4; }
+    .dim { fill: #B5AEA6; }
+    .tree { fill: none; stroke: #3A3540; stroke-width: 2; }
+  </style>
+  <rect width="800" height="420" fill="#0B0A0D"/>
+
+  <text class="t" x="24" y="46" font-size="26" font-weight="600">Where the Android files land</text>
+  <text class="t dim" x="24" y="74" font-size="16">Rose is yours and secret. Sand is what the build makes.</text>
+
+  <text class="m" x="24" y="116" font-size="16" font-weight="700">android/</text>
+  <path class="tree" d="M34 126 V196"/>
+
+  <path class="tree" d="M34 152 H54"/>
+  <rect x="60" y="138" width="8" height="28" fill="#EF3A78"/>
+  <text class="m" x="78" y="158" font-size="15">keystore.properties</text>
+  <text class="t dim" x="470" y="158" font-size="15">You write it. Never committed.</text>
+
+  <path class="tree" d="M34 196 H54"/>
+  <text class="m" x="60" y="202" font-size="15" font-weight="700">app/</text>
+  <path class="tree" d="M70 212 V372"/>
+
+  <path class="tree" d="M70 240 H90"/>
+  <rect x="96" y="226" width="8" height="28" fill="#EF3A78"/>
+  <text class="m" x="114" y="246" font-size="15">my-release.jks</text>
+  <text class="t dim" x="470" y="246" font-size="15">Your key. Never committed.</text>
+
+  <path class="tree" d="M70 284 H90"/>
+  <rect x="96" y="270" width="8" height="28" fill="#F5D3A1"/>
+  <text class="m" x="114" y="290" font-size="15">build/outputs/apk/debug/</text>
+  <text class="t dim" x="470" y="290" font-size="15">app-debug.apk, from npm run apk</text>
+
+  <path class="tree" d="M70 328 H90"/>
+  <rect x="96" y="314" width="8" height="28" fill="#F5D3A1"/>
+  <text class="m" x="114" y="334" font-size="15">build/outputs/apk/release/</text>
+  <text class="t dim" x="470" y="334" font-size="15">app-release.apk, signed with your key</text>
+
+  <path class="tree" d="M70 372 H90"/>
+  <rect x="96" y="358" width="8" height="28" fill="#F5D3A1"/>
+  <text class="m" x="114" y="378" font-size="15">build/outputs/bundle/release/</text>
+  <text class="t dim" x="470" y="378" font-size="15">app-release.aab, for Google Play</text>
+</svg>

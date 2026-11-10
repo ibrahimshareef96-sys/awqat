@@ -23,7 +23,12 @@ server unless it says so. Nothing here types or generates Quran text.
 9. **A free tasbih** (S): the counter ring for any dhikr you choose.
 10. **Hijri date and fasting on the widgets** (S).
 11. **Money in any currency** (M): today it adds up in AED, with USD converted.
-12. **A reference sync and voice server** (L): an open version of the backend in docs/backend.md.
+12. **A reference sync and voice server** (L): an open version of the backend in docs/backend.md, with the meal
+    estimate route in docs/food.md.
+13. **Training programmes** (M): a plan of exercises with sets and reps for each day, ticked off as you go, instead of
+    one line a day.
+14. **Food you eat often** (S): one tap to log a meal you logged before.
+15. **Water, and fasting days in Food** (S): a day you fast shows as a fast, not as a day with nothing logged.
 
 ## Never
 

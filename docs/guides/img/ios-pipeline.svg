@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="560" viewBox="0 0 800 560" role="img" aria-labelledby="ip-title ip-desc">
+  <title id="ip-title">From clone to iPhone or iPad</title>
+  <desc id="ip-desc">Five steps from top to bottom. One, npm run build makes the dist folder. Two, npx cap sync ios copies it into ios/App. Three, open ios/App/App.xcodeproj and Xcode opens. Four, set your team on both targets, App and PersonalOSWidgets, until no red errors show. Five, press Run in Xcode and Awqat opens on the device.</desc>
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F2ECE4; }
+    .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #F5D3A1; }
+    .n { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0B0A0D; }
+    .dim { fill: #B5AEA6; }
+    .box { fill: #17151B; stroke: #3A3540; stroke-width: 2; }
+    .line { fill: none; stroke: #B5AEA6; stroke-width: 2; }
+  </style>
+  <defs>
+    <marker id="ip-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#B5AEA6"/>
+    </marker>
+  </defs>
+  <rect width="800" height="560" fill="#0B0A0D"/>
+
+  <text class="t" x="24" y="46" font-size="26" font-weight="600">From clone to iPhone or iPad</text>
+  <text class="t dim" x="24" y="74" font-size="16">What happens, what does it, and what you should see.</text>
+
+  <rect class="box" x="24" y="98" width="752" height="60"/>
+  <rect x="38" y="112" width="32" height="32" fill="#F5D3A1"/>
+  <text class="n" x="54" y="134" font-size="17" font-weight="700" text-anchor="middle">1</text>
+  <text class="t" x="86" y="134" font-size="18" font-weight="600">Build the web app</text>
+  <text class="m" x="300" y="134" font-size="15">npm run build</text>
+  <text class="t dim" x="590" y="134" font-size="15">makes dist/</text>
+  <path class="line" d="M400 158 V178" marker-end="url(#ip-arrow)"/>
+
+  <rect class="box" x="24" y="182" width="752" height="60"/>
+  <rect x="38" y="196" width="32" height="32" fill="#F89A5B"/>
+  <text class="n" x="54" y="218" font-size="17" font-weight="700" text-anchor="middle">2</text>
+  <text class="t" x="86" y="218" font-size="18" font-weight="600">Copy it into iOS</text>
+  <text class="m" x="300" y="218" font-size="15">npx cap sync ios</text>
+  <text class="t dim" x="590" y="218" font-size="15">fills ios/App/</text>
+  <path class="line" d="M400 242 V262" marker-end="url(#ip-arrow)"/>
+
+  <rect class="box" x="24" y="266" width="752" height="60"/>
+  <rect x="38" y="280" width="32" height="32" fill="#F4664F"/>
+  <text class="n" x="54" y="302" font-size="17" font-weight="700" text-anchor="middle">3</text>
+  <text class="t" x="86" y="302" font-size="18" font-weight="600">Open the project</text>
+  <text class="m" x="300" y="302" font-size="15">open ios/App/App.xcodeproj</text>
+  <text class="t dim" x="590" y="302" font-size="15">Xcode opens</text>
+  <path class="line" d="M400 326 V346" marker-end="url(#ip-arrow)"/>
+
+  <rect class="box" x="24" y="350" width="752" height="60"/>
+  <rect x="38" y="364" width="32" height="32" fill="#EF3A78"/>
+  <text class="n" x="54" y="386" font-size="17" font-weight="700" text-anchor="middle">4</text>
+  <text class="t" x="86" y="386" font-size="18" font-weight="600">Sign with your team</text>
+  <text class="t" x="300" y="386" font-size="15" style="fill:#F5D3A1">Team, on both targets</text>
+  <text class="t dim" x="590" y="386" font-size="15">no red errors</text>
+  <path class="line" d="M400 410 V430" marker-end="url(#ip-arrow)"/>
+
+  <rect x="24" y="434" width="752" height="60" fill="#17151B" stroke="#9B3FA0" stroke-width="2"/>
+  <rect x="38" y="448" width="32" height="32" fill="#9B3FA0"/>
+  <text class="n" x="54" y="470" font-size="17" font-weight="700" text-anchor="middle" style="fill:#F2ECE4">5</text>
+  <text class="t" x="86" y="470" font-size="18" font-weight="600">Run on your device</text>
+  <text class="t" x="300" y="470" font-size="15" style="fill:#F5D3A1">The Run button in Xcode</text>
+  <text class="t dim" x="590" y="470" font-size="15">Awqat opens</text>
+
+  <text class="t dim" x="24" y="530" font-size="15">After you change anything in src/, do steps 1 and 2 again, then Run.</text>
+</svg>

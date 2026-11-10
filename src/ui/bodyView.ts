@@ -5,6 +5,7 @@ import type { BodySummary, WeightPoint } from "../body/summary.ts";
 import { dayDone, liftProgress, planFor, weekDoneDays, type LiftRow } from "../body/training.ts";
 import { keyOf } from "../agenda/days.ts";
 import { formatTime } from "../prayer/times.ts";
+import { foodCard, foodFact, type FoodModel } from "./foodView.ts";
 import { esc } from "./html.ts";
 
 export interface BodyModel {
@@ -27,6 +28,8 @@ export interface BodyModel {
   removeArmed: number | null;
   /** The lift one tap from going. */
   liftArmed: string | null;
+  /** Food's card (ui/foodView.ts); left out where a caller draws none. */
+  food?: FoodModel;
 }
 
 const LIFTS_SHOWN = 60;
@@ -193,13 +196,18 @@ export function stepsLine(m: Pick<BodyModel, "summary" | "log">): string {
 /** Home's line for the body: the steps against the user's goal, last night's sleep, the week's workouts and what is on today. */
 export function homeBodyCard(m: BodyModel): string {
   const today = planFor(m.log, m.today);
-  if (!m.log.connected && !today && m.log.stepGoal === null) return "";
+  const food = m.food ? foodFact(m.food.log, m.today) : "";
+  if (!m.log.connected && !today && m.log.stepGoal === null) {
+    // Someone who only logs food sees that, not an empty count of steps.
+    return food ? `<button type="button" class="card link" data-go="body"><span class="split"><span class="label">BODY</span></span>` +
+      `<span class="small">${esc(food)}</span></button>` : "";
+  }
   const s = m.summary?.steps ?? null;
   const goal = m.log.stepGoal;
   const sleep = m.summary?.sleep?.last ?? null;
   const target = m.log.weeklyTarget;
   const count = workoutCount(m);
-  const facts = [sleep ? `Sleep ${hoursMinutes(sleep.minutes)}` : "", target || count ? `Workouts ${count}${target ? ` of ${target}` : ""}` : ""].filter(Boolean);
+  const facts = [sleep ? `Sleep ${hoursMinutes(sleep.minutes)}` : "", target || count ? `Workouts ${count}${target ? ` of ${target}` : ""}` : "", food].filter(Boolean);
   return `<button type="button" class="card link" data-go="body"><span class="split"><span class="label">BODY</span>` +
     `<span class="small">${today ? `Today: ${esc(today)}` : ""}</span></span><span class="numeral">${s ? thousands(s.today) : "–"} ` +
     `<span class="soft">${goal !== null ? `of ${thousands(goal)} steps` : "steps"}</span></span>` +
@@ -269,11 +277,13 @@ function readLine(m: BodyModel): string {
 
 export function bodyView(m: BodyModel, header: string, notice: string, chrome: string): string {
   let content: string;
-  if (m.available === null) content = `<section class="card"><p class="muted">Looking for ${esc(storeName(m))}…</p></section>`;
-  else if (!m.available.available) content = unavailableCard(m) + trainingCard(m) + planCard(m) + weightCard(m);
-  else if (!m.log.connected) content = connectCard(m) + trainingCard(m) + planCard(m) + weightCard(m);
+  // Training, the plan and food are the user's own records: they show whatever the health store says.
+  const own = trainingCard(m) + planCard(m) + (m.food ? foodCard(m.food) : "");
+  if (m.available === null) content = `<section class="card"><p class="muted">Looking for ${esc(storeName(m))}…</p></section>${own}`;
+  else if (!m.available.available) content = unavailableCard(m) + own + weightCard(m);
+  else if (!m.log.connected) content = connectCard(m) + own + weightCard(m);
   else {
-    content = `${stepsCard(m)}${trainingCard(m)}${planCard(m)}${weightCard(m)}${sleepCard(m)}${workoutsCard(m)}<section class="card"><div class="split">` +
+    content = `${stepsCard(m)}${own}${weightCard(m)}${sleepCard(m)}${workoutsCard(m)}<section class="card"><div class="split">` +
       `<p class="small">${esc(readLine(m))}</p><button type="button" class="ghost-link" data-action="health-refresh"` +
       `${m.reading || m.busy ? " disabled" : ""}>Refresh</button></div></section>`;
   }

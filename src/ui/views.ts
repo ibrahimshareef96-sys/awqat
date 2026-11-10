@@ -391,7 +391,7 @@ export function settingsView(v: ViewModel, turn?: TurnStats): string {
     `al-Muslim, fetched from hisnmuslim.com, and for the Quran items Saheeh International and the transliteration, ` +
     `fetched from Quran.com · Quran fonts provided by Quran Foundation, King Fahd ` +
     `Complex script · Quran metadata: Tanzil Project (tanzil.net) · type: Instrument Serif (OFL) · weather: Open-Meteo ` +
-    `(CC BY 4.0) · covers and book data: Open Library · calendars read with ical.js (MPL-2.0) · health data through ` +
+    `(CC BY 4.0) · covers and book data: Open Library · packet nutrition: Open Food Facts (ODbL) ·calendars read with ical.js (MPL-2.0) · health data through ` +
     `Capgo's Capacitor Health (MPL-2.0) · voice through ElevenLabs' client (MIT) and LiveKit (Apache-2.0) · recitation ` +
     `heard by Tarteel AI's whisper-tiny-ar-quran (Apache-2.0) through transformers.js (Apache-2.0) and ONNX Runtime ` +
     `(MIT), placed on the Quran text of the Tanzil Project (<button type="button" class="link-inline" ` +

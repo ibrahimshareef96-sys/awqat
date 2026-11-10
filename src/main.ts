@@ -72,6 +72,7 @@ import * as covers from "./app/coverActions.ts";
 import * as friday from "./app/fridayActions.ts";
 import * as agenda from "./app/agendaActions.ts";
 import * as body from "./app/bodyActions.ts";
+import * as food from "./app/foodActions.ts";
 import * as money from "./app/moneyActions.ts";
 import { canUndoLog, undoTalkLog } from "./app/talkLog.ts";
 import * as voice from "./app/voiceActions.ts";
@@ -90,6 +91,7 @@ import { checkCalendars } from "./agenda/calendars.ts";
 import { adoptOldCalendars, readCalendarsFile } from "./agenda/calendarStore.ts";
 import { checkAgenda } from "./agenda/agenda.ts";
 import { checkBody } from "./body/body.ts";
+import { checkFood } from "./food/food.ts";
 import { startingLearn } from "./learn/seed.ts";
 import * as learn from "./app/learnActions.ts";
 import { isLearnSheet, learnSheet, learnView, reviewView, trackSubtitle, trackView } from "./ui/learnView.ts";
@@ -243,6 +245,8 @@ function applySizes(root: ParentNode): void {
 
 /** What was saved has been read. Before that, state is only its empty defaults, and nothing may act on it. */
 let loaded = false;
+/** Food was read whole at start-up: the only case its unused photos can be tidied. */
+let foodReadCleanly = false;
 
 /**
  * The widgets and what is live on the lock screen hear of every change; each is only sent what differs. Also called for
@@ -708,6 +712,7 @@ function show(target: string): void {
   state.modeRemoveArmed = null;
   state.moneyArmed = null;
   state.liftRemoveArmed = null;
+  state.mealRemoveArmed = null;
   if (target !== "agenda") state.agendaDay = null;
   render();
   if (backToAdhkar) window.scrollTo(0, adhkarScroll);
@@ -861,6 +866,11 @@ function act(action: string, value: string): void {
     case "workout-timer": return void workoutTimer();
     case "mode-live": return modes.toggleLive(value);
     case "lift-remove": return void body.removeLiftTap(value);
+    case "meal-photo": return void food.addPhoto("camera");
+    case "meal-scan": return void food.scan();
+    case "meal-estimate": return void food.estimate();
+    case "meal-cancel": return void food.cancelDraft();
+    case "meal-remove": return void food.removeMealTap(value);
     case "health-connect": return void body.connect();
     case "health-refresh": return void body.readBody();
     case "health-settings": return body.healthSettings();
@@ -975,6 +985,8 @@ function onSubmit(event: SubmitEvent): void {
   else if (kind === "step-goal") void body.setStepGoalText(text("goal"));
   else if (kind === "workout-plan") void body.savePlan(data);
   else if (kind === "lift-add") void body.logLift(data);
+  else if (kind === "meal-add") void food.logMeal(data);
+  else if (kind === "food-goal") void food.saveGoal(data);
   else if (kind === "learn-session") void learn.logStudy(data).then(modes.studyLogged);
   else if (kind === "mode-dua") void modes.submitDua(data);
   else if (kind === "money") void money.submit(data);
@@ -1114,7 +1126,7 @@ function onResume(): void {
 /** Reads everything saved. True when the library was read whole and has books, the only case its files can be tidied. */
 async function load(): Promise<boolean> {
   const keys = [KEYS.log, KEYS.settings, KEYS.place, KEYS.quran, KEYS.library, KEYS.friday, KEYS.adhkar, KEYS.mushaf,
-    KEYS.murajaah, KEYS.agenda, KEYS.body, KEYS.bookSync, KEYS.learn, KEYS.modes, KEYS.money,
+    KEYS.murajaah, KEYS.agenda, KEYS.body, KEYS.food, KEYS.bookSync, KEYS.learn, KEYS.modes, KEYS.money,
     KEYS.recordsSync, KEYS.reviews] as const;
   const [reads, calendarsRead] = await Promise.all([Promise.all(keys.map((k) => read(k))), readCalendarsFile()]);
   const raw = Object.fromEntries(keys.map((k, i) => [k, reads[i]])) as Record<(typeof keys)[number], ReadResult>;
@@ -1136,13 +1148,15 @@ async function load(): Promise<boolean> {
   else state.blocked.add(KEYS.calendars);
   const calendars = checkCalendars(calendarsText);
   const bodyLog = checkBody(raw[KEYS.body].value);
+  const foodLog = checkFood(raw[KEYS.food].value);
+  foodReadCleanly = raw[KEYS.food].ok && !foodLog.damaged;
   // Learn starts from the default empty Islamic tracks only where it was never saved (learn/seed.ts).
   const learnLog = startingLearn(raw[KEYS.learn]);
   const damaged = [[KEYS.log, log.damaged], [KEYS.quran, quranLog.damaged], [KEYS.library, library.damaged],
     [KEYS.friday, fridayLog.damaged], [KEYS.modes, modeLog.damaged], [KEYS.money, moneyLog.damaged], [KEYS.adhkar, adhkarLog.damaged],
     [KEYS.mushaf, marks.damaged],
     [KEYS.murajaah, murajaah.damaged],
-    [KEYS.body, bodyLog.damaged], [KEYS.learn, learnLog.damaged], [KEYS.reviews, reviews.damaged]] as const;
+    [KEYS.body, bodyLog.damaged], [KEYS.food, foodLog.damaged], [KEYS.learn, learnLog.damaged], [KEYS.reviews, reviews.damaged]] as const;
   for (const [key, isDamaged] of damaged) {
     const value = raw[key].value;
     // A damaged value with no copy kept aside is never written over this session.
@@ -1160,6 +1174,7 @@ async function load(): Promise<boolean> {
   state.reviews = reviews.log;
   state.calendars = calendars.list;
   state.body = bodyLog.log;
+  state.food = foodLog.log;
   state.learn = learnLog.learn;
   // The agenda is a copy of the calendars, read again whenever it is old: one that cannot be read starts afresh.
   state.agenda = checkAgenda(raw[KEYS.agenda].value, calendars.list.calendars.map((c) => c.id));
@@ -1264,6 +1279,7 @@ async function boot(): Promise<void> {
   // Old cover files are cleared first. Books still without a cover get theirs once the library has synced (below), so a
   // lookup never works on a copy another device has already changed.
   const tidied = covers.tidyCovers(libraryReadCleanly).catch(() => undefined);
+  void food.tidyMealPhotos(foodReadCleanly).catch(() => undefined);
   void pruneKeptPages();
   state.notify = await notifyPermission(false);
   await refreshPlace(false);

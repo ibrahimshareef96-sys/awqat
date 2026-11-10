@@ -15,6 +15,7 @@ export const KEYS = {
   calendars: "os.calendars.v1",
   agenda: "os.agenda.v1",
   body: "os.body.v1",
+  food: "os.food.v1",
   learn: "os.learn.v1",
   modes: "os.modes.v1",
   money: "os.money.v1",

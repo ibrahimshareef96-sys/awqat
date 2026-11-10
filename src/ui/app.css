@@ -197,6 +197,14 @@ li:first-child > .mode-row { border-top: 0; }
 .lift-field { display: flex; flex-direction: column; min-width: 0; }
 .lift-field:first-child, .lift-form .pill { grid-column: 1 / -1; }
 .plan-card > summary { cursor: pointer; min-height: 24px; }
+/* Food: four numbers to a meal, so the form is two by two under the name; a photo beside its meal. */
+.meal-form { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 8px; }
+.meal-draft { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; }
+.meal-photo { width: 96px; height: 96px; flex-shrink: 0; border-radius: 10px; object-fit: cover; background: rgba(255,255,255,0.08); }
+.meal-clear { min-height: 44px; }
+.meal-row { justify-content: flex-start; flex-wrap: nowrap; }
+.meal-row .col { flex: 1; display: flex; flex-direction: column; }
+.meal-thumb { width: 44px; height: 44px; flex-shrink: 0; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,0.08); }
 .plan-card[open] > summary { padding-bottom: 8px; }
 .dua-field { font-family: "Noto Naskh Arabic", "Amiri", serif; font-size: 18px; line-height: 1.9; }
 .checks { gap: 0; }

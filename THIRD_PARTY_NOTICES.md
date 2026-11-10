@@ -85,6 +85,10 @@ Verse keys only, never the Quran's words.
   come from Quran.com's API on the phone, the same API the mushaf uses, under Quran Foundation's developer terms above:
   kept for at most seven days, credited "Saheeh International" and "Quran.com" where shown, never bundled.
 - **Weather**: [Open-Meteo](https://open-meteo.com), CC BY 4.0, used only in a voice talk.
+- **Packet nutrition**: [Open Food Facts](https://world.openfoodfacts.org), whose database is under the
+  [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/), looked up by barcode when the user scans a
+  packet. One product's name and what 100 g holds are read on the phone and kept only in the meals the user logs;
+  nothing of the database is in this repository.
 - **Book data and covers**: [Open Library](https://openlibrary.org), looked up when you scan or search for a book.
   Covers are saved on the phone and never committed to this repository.
 

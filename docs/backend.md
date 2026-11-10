@@ -1,7 +1,8 @@
 # The optional backend
 
-Awqat works fully on the phone. Four features need a server you run yourself: Talk (the voice assistant), sync of
-books and records between your devices, the "reading now" shelf, and the Work and Inbox feeds. Without a server they
+Awqat works fully on the phone. Five features need a server you run yourself: Talk (the voice assistant), sync of
+books and records between your devices, the "reading now" shelf, the Work and Inbox feeds, and an estimate of a meal
+from its photo. Without a server they
 are hidden or stay quiet, and nothing asks you to sign in.
 
 The original author runs these on a Cloudflare Worker that is not part of this repository. This page is the contract
@@ -30,7 +31,7 @@ device backups (`src/talk/session.ts`), and sends it nowhere else.
 | Route | Called from | What it does |
 |---|---|---|
 | `POST /app/books` | `src/books/sync.ts` | Books: sends the changes since a cursor, returns other devices' changes and a new cursor. |
-| `POST /app/records` | `src/sync/records.ts` | The other records (prayer log, Quran, adhkar, modes, learning, body, money, weekly reviews), the same way. Each is a `kind` and an `id` with its data; a server that keeps any kind it is sent needs no change when the app syncs a new one. |
+| `POST /app/records` | `src/sync/records.ts` | The other records (prayer log, Quran, adhkar, modes, learning, body, food, money, weekly reviews), the same way. Each is a `kind` and an `id` with its data; a server that keeps any kind it is sent needs no change when the app syncs a new one. |
 | `PUT /app/library` `{ reading }` | `src/books/shelf.ts` | The books in hand, for a "reading now" shelf on another screen. |
 
 The wire formats, and how conflicts resolve (record by record, the newer stamp wins, except where a collection can
@@ -47,6 +48,12 @@ The app shows only the fields `src/feeds/feeds.ts` checks, cleans every string i
 back. What the Work feed has `due` with a `date` (and, if it likes, a `time` as `"HH:MM"` on the user's clock) also
 shows on that day in Agenda and in the Weekly Review's look ahead, read only. A mail can try to steer the model that sorted it, so its lines are marked as the model's reading, and links,
 addresses, phone numbers and codes are stripped.
+
+## Food
+
+| Route | Called from | What it does |
+|---|---|---|
+| `POST /app/food/estimate` `{ image }` | `src/food/estimate.ts` | Looks at one photo of a meal and answers `{ ok, name, kcal, protein, carbs, fat }`, or `{ ok, unsure: true }`. Called only when the user taps Estimate on that photo. The full contract and a prompt are in [food.md](food.md). |
 
 ## What a server must never do
 

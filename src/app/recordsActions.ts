@@ -7,7 +7,7 @@
  */
 import { isNative } from "../device.ts";
 import {
-  adhkarCollection, bodyCollection, fridayCollection, learnCollection, modesCollection, moneyCollection, murajaahCollection, mushafCollection,
+  adhkarCollection, bodyCollection, foodCollection, fridayCollection, learnCollection, modesCollection, moneyCollection, murajaahCollection, mushafCollection,
   prayerCollection, quranCollection, reviewsCollection,
 } from "../sync/collections.ts";
 import {
@@ -37,7 +37,7 @@ const NOTHING_SENT: Wire = { cursor: 0, records: [], removed: [] };
 
 const COLLECTIONS: readonly Collection[] = [prayerCollection, quranCollection, adhkarCollection, fridayCollection,
   mushafCollection, murajaahCollection, learnCollection, modesCollection, moneyCollection, bodyCollection,
-  reviewsCollection] as readonly Collection[];
+  foodCollection, reviewsCollection] as readonly Collection[];
 const KINDS = kindsOf(COLLECTIONS);
 
 /** Each synced store key's value in the app's state, and how a value from another device is put back. */
@@ -52,6 +52,7 @@ const ACCESS: Readonly<Record<string, { get: () => unknown; set: (value: never) 
   [KEYS.modes]: { get: () => state.modes, set: (v) => { state.modes = v; } },
   [KEYS.money]: { get: () => state.money, set: (v) => { state.money = v; } },
   [KEYS.body]: { get: () => state.body, set: (v) => { state.body = v; } },
+  [KEYS.food]: { get: () => state.food, set: (v) => { state.food = v; } },
   [KEYS.reviews]: { get: () => state.reviews, set: (v) => { state.reviews = v; } },
 };
 
@@ -91,9 +92,9 @@ export function recordSaved(key: string, value: unknown): void {
       state.learnSeedOnly = false;
       base = stampSaved(learnCollection, seedLearn(), base, 1);
     }
-    // Money, Body and the reviews are put in state before they are saved, so state is the newer: a sync that landed during
-    // the save is in it, and stamping the older value would mark what arrived as removed, on every device.
-    const current = key === KEYS.money || key === KEYS.body || key === KEYS.reviews ? ACCESS[key].get() : value;
+    // Money, Body, Food and the reviews are put in state before they are saved, so state is the newer: a sync that landed
+    // during the save is in it, and stamping the older value would mark what arrived as removed, on every device.
+    const current = key === KEYS.money || key === KEYS.body || key === KEYS.food || key === KEYS.reviews ? ACCESS[key].get() : value;
     const next = stampSaved(collection, current, base, Date.now());
     if (next === state.recordsSync) return;
     state.recordsSync = next;

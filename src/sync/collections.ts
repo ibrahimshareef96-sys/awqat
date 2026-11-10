@@ -4,6 +4,7 @@
  * like data read from this one. What stays on each device: the mushaf's page colour.
  */
 import { checkBody, DONE_MAX, LIFTS_MAX, WEIGHTS_MAX, type BodyLog } from "../body/body.ts";
+import { MEALS_MAX, checkFood, type FoodLog } from "../food/food.ts";
 import { ADHKAR_KEEP_DAYS, checkAdhkarLog, type AdhkarLog } from "../faith/adhkar.ts";
 import { checkFridayLog, type FridayLog } from "../faith/friday.ts";
 import { checkLog, type PrayerLog } from "../prayer/log.ts";
@@ -250,6 +251,28 @@ export const bodyCollection: Collection<BodyLog> = {
       lifts: of(records, "body.lift").map((r): Data => ({ ...r.data, id: r.id }))
         .sort((a, b) => (String(a.date) < String(b.date) ? 1 : String(a.date) > String(b.date) ? -1 : 0)).slice(0, LIFTS_MAX),
       done: newest(of(records, "body.done"), DONE_MAX).map((r) => r.id),
+    })).log;
+  },
+};
+
+/**
+ * Food: the goals on one record and each meal on its own. A meal's photo is a file on the device that took it, so its
+ * name never travels: a meal arriving from another device keeps the photo this device already holds for it, or none.
+ */
+export const foodCollection: Collection<FoodLog> = {
+  key: KEYS.food,
+  kinds: ["food.goal", "food.meal"],
+  toRecords: (log) => [
+    ...(log.goal.kcal !== null || log.goal.protein !== null ? [{ kind: "food.goal", id: "goal", data: { ...log.goal } as Data }] : []),
+    ...log.meals.map((m) => ({ kind: "food.meal", id: m.id, data: { ...m, photo: null } as unknown as Data })),
+  ],
+  fromRecords: (records, current) => {
+    const photos = new Map(current.meals.map((m) => [m.id, m.photo]));
+    return checkFood(JSON.stringify({
+      v: 1,
+      goal: of(records, "food.goal")[0]?.data ?? { kcal: null, protein: null },
+      meals: of(records, "food.meal").map((r): Data => ({ ...r.data, id: r.id, photo: photos.get(r.id) ?? null }))
+        .sort((a, b) => (String(a.day) < String(b.day) ? 1 : String(a.day) > String(b.day) ? -1 : num(b.at) - num(a.at))).slice(0, MEALS_MAX),
     })).log;
   },
 };

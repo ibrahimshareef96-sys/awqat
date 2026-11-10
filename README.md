@@ -5,7 +5,7 @@
 # Awqat
 
 Awqat (أوقات, "the times") is a personal OS for Muslims: a calm phone app that runs your day on the five prayer
-times. Prayer, Quran, dhikr, study, books, body and money live in one place, and the screen changes with the time of
+times. Prayer, Quran, dhikr, study, books, training, food and money live in one place, and the screen changes with the time of
 day. After Fajr it opens on the morning adhkar, on Friday it asks about Al-Kahf, and after Isha it brings up what you
 set yourself to study.
 
@@ -17,6 +17,25 @@ is no account, no server of ours, no analytics and no ads.
   &nbsp;
   <img src="docs/screenshots/faith.jpg" alt="Faith: today's prayer times with the iqama after each" width="300">
 </p>
+<p align="center">
+  <img src="docs/screenshots/training.jpg" alt="Training: today's plan, the workout timer and the lifts logged, each with what to try next" width="300">
+  &nbsp;
+  <img src="docs/screenshots/food.jpg" alt="Food: today's energy and protein against your own goals, and the form to log a meal" width="300">
+</p>
+
+## Start here
+
+New to this, or handing it to a coding agent? The guides have pictures for every step.
+
+| I want to | Guide |
+|---|---|
+| See it running in ten minutes | [Run it on your computer](docs/guides/01-run-it.md) |
+| Put it on my Android phone | [Android](docs/guides/02-android.md) |
+| Put it on my iPhone or iPad | [iPhone and iPad](docs/guides/03-iphone-ipad.md) |
+| Give it my own name, id, icon and colours | [Make it yours](docs/guides/04-make-it-yours.md) |
+| Have Claude Code or another agent do it for me | [With a coding agent](docs/guides/05-with-a-coding-agent.md) |
+
+All of them, with a map: [docs/guides](docs/guides/README.md).
 
 ## What it does
 
@@ -49,9 +68,18 @@ study timer, lessons to review, and a window after the prayer you choose.
 **Books.** A reading list with a barcode scanner, Open Library covers, pages read, lessons and notes, and a Goodreads
 import.
 
-**The rest of the day.** Your calendars (any iCal address, with the steps to find it), Body (weight, steps, sleep and
-workouts from Health Connect or Apple Health, read only), and Money (income, spending and what is owed, in AED and USD
-for now).
+**Training.** A plan for each day of the week, a workout timer that shows on the lock screen, and a log of your lifts
+(exercise, kilos, reps, sets) that shows what you did last time and what to try next. Weight, steps and sleep are read
+from Health Connect or Apple Health, read only, against a step goal of your own.
+
+**Food.** Log a meal in a few seconds: type it, take a photo of the plate, or scan a packet's barcode and say how many
+grams you ate. The day adds up to energy, protein, carbs and fat against goals you set yourself, with the last seven
+days beside it. Packet numbers come from [Open Food Facts](https://world.openfoodfacts.org) by the barcode alone.
+Photos stay on your phone. With your own server, one tap sends a photo to it for an estimate you check before it is
+logged ([docs/food.md](docs/food.md)). No day is graded.
+
+**The rest of the day.** Your calendars (any iCal address, with the steps to find it) and Money (income, spending and
+what is owed, in AED and USD for now).
 
 **The Weekly Review.** A muhasabah in four short steps on one screen: the week's numbers, each on its own and never
 one score; three questions to answer if you want to; up to three intentions for the week ahead, which stay on Home to
@@ -89,7 +117,7 @@ You need Node 22 or newer. For Android, JDK 21 and the Android SDK. For iPhone a
 git clone https://github.com/ibrahimshareef96-sys/awqat.git
 cd awqat
 npm ci
-npm test          # 1,300+ tests, run on the Asia/Dubai clock so the expected prayer times hold
+npm test          # 1,700+ tests, run on the Asia/Dubai clock so the expected prayer times hold
 npm run build
 npx cap sync
 ```
@@ -106,10 +134,14 @@ Point Claude Code, Codex or any agent at [AGENTS.md](AGENTS.md) first (Claude Co
 [CLAUDE.md](CLAUDE.md) on its own). It holds the ground rules, the commands, the layout of the code and the steps for
 adding a feature, so an agent can make a change that keeps what Awqat promises.
 
-Before you publish a build of your own, change the app id `app.awqat` (in `capacitor.config.ts`,
-`android/app/build.gradle`, `android/app/src/main/res/xml/shortcuts.xml` and the Xcode project) and the iOS App Group
-`group.app.awqat`, and set your own Apple
-team in Xcode. Release signing on Android reads `android/keystore.properties` or the file named by
+Before you publish a build of your own, give it your own app id and name. One command changes them everywhere
+(try it with `--dry-run` first), and [Make it yours](docs/guides/04-make-it-yours.md) covers the icon and colours:
+
+```bash
+node scripts/make-it-yours.mjs --id com.example.myapp --name "My App"
+```
+
+Then set your own Apple team in Xcode. Release signing on Android reads `android/keystore.properties` or the file named by
 `AWQAT_KEYSTORE_PROPS`; neither is ever committed.
 
 Settings that live in `.env.local` (see `.env.example`):
@@ -121,11 +153,13 @@ Settings that live in `.env.local` (see `.env.example`):
 
 Out of the box Awqat talks to no server of its own. It reaches public services only for what you ask of it: Quran
 Foundation for the mushaf's fonts and words, hisnmuslim.com and Quran Foundation for the adhkar's English and
-transliteration while Sound or Meaning is on, Open Library when you scan or look up a book, the calendar addresses you
-add, and, when you first use recitation, Hugging Face and the Tanzil Project for the speech model and the Quran text.
+transliteration while Sound or Meaning is on, Open Library when you scan or look up a book, Open Food Facts when you
+scan a packet (only its barcode is sent), the calendar addresses you add, and, when you first use recitation, Hugging Face and the Tanzil Project for the speech model and the Quran text.
 Your recitation is heard on the phone and never sent anywhere. Your location is rounded to about a kilometre and stays
 on the phone, unless you use Talk, which sends it to
-Open-Meteo for the weather. Health data is only read; today's step count is kept for the widget. The details are in
+Open-Meteo for the weather. Health data is only read; today's step count is kept for the widget. A meal's photo is
+redrawn without the camera's location, kept in the app's own folder, and sent nowhere unless you run your own server
+and tap Estimate on that photo. The details are in
 [public/privacypolicy.html](public/privacypolicy.html). If you publish a build with Talk or sync turned on, update the
 iOS privacy manifests (`PrivacyInfo.xcprivacy`) to match.
 
@@ -139,7 +173,8 @@ Quran fonts provided by [Quran Foundation](https://quran.foundation), in the Kin
 Quran metadata, and the text recitation matches against, from the [Tanzil Project](https://tanzil.net). The Quran
 speech model is [Tarteel AI](https://tarteel.ai)'s Whisper Tiny for Quran (Apache-2.0), run with transformers.js and
 ONNX Runtime. Type: Instrument Serif (SIL OFL 1.1). Weather from
-[Open-Meteo](https://open-meteo.com) (CC BY 4.0). Book data from [Open Library](https://openlibrary.org).
+[Open-Meteo](https://open-meteo.com) (CC BY 4.0). Book data from [Open Library](https://openlibrary.org). Packet
+nutrition from [Open Food Facts](https://world.openfoodfacts.org) (Open Database License), fetched on the phone.
 Full notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## How it was made

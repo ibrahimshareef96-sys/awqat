@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520" role="img" aria-labelledby="pm-title pm-desc">
+  <title id="pm-title">The five paths through the Awqat guides</title>
+  <desc id="pm-desc">Start with guide 01, try it in a browser. From there go to guide 02 for an Android phone, guide 03 for an iPhone or iPad, or guide 04 to make it yours. Guide 05, use a coding agent, works alongside every path.</desc>
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F2ECE4; }
+    .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #F2ECE4; }
+    .dim { fill: #B5AEA6; }
+    .ink { fill: #0B0A0D; }
+    .box { fill: #17151B; stroke: #3A3540; stroke-width: 2; }
+    .line { fill: none; stroke: #B5AEA6; stroke-width: 2; }
+  </style>
+  <defs>
+    <marker id="pm-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#B5AEA6"/>
+    </marker>
+  </defs>
+  <rect width="800" height="520" fill="#0B0A0D"/>
+
+  <text class="t" x="24" y="46" font-size="26" font-weight="600">Pick your path</text>
+  <text class="t dim" x="24" y="74" font-size="16">Everyone starts at 01. Then choose the phone you have.</text>
+
+  <!-- 01 -->
+  <rect class="box" x="200" y="98" width="400" height="92"/>
+  <rect x="216" y="114" width="60" height="60" fill="#F5D3A1"/>
+  <text class="m ink" x="246" y="153" font-size="24" font-weight="700" text-anchor="middle">01</text>
+  <text class="t" x="294" y="140" font-size="20" font-weight="600">Try it in a browser</text>
+  <text class="t dim" x="294" y="166" font-size="16">Any computer. No phone needed.</text>
+
+  <!-- connectors -->
+  <path class="line" d="M400 190 V220"/>
+  <path class="line" d="M142 220 H658"/>
+  <path class="line" d="M142 220 V246" marker-end="url(#pm-arrow)"/>
+  <path class="line" d="M400 220 V246" marker-end="url(#pm-arrow)"/>
+  <path class="line" d="M658 220 V246" marker-end="url(#pm-arrow)"/>
+
+  <!-- 02 -->
+  <rect class="box" x="24" y="250" width="236" height="128"/>
+  <rect x="40" y="266" width="44" height="44" fill="#F89A5B"/>
+  <text class="m ink" x="62" y="295" font-size="19" font-weight="700" text-anchor="middle">02</text>
+  <text class="t" x="40" y="338" font-size="19" font-weight="600">Android phone</text>
+  <text class="t dim" x="40" y="362" font-size="15">Windows, Mac or Linux</text>
+
+  <!-- 03 -->
+  <rect class="box" x="282" y="250" width="236" height="128"/>
+  <rect x="298" y="266" width="44" height="44" fill="#F4664F"/>
+  <text class="m ink" x="320" y="295" font-size="19" font-weight="700" text-anchor="middle">03</text>
+  <text class="t" x="298" y="338" font-size="19" font-weight="600">iPhone or iPad</text>
+  <text class="t dim" x="298" y="362" font-size="15">Needs a Mac with Xcode</text>
+
+  <!-- 04 -->
+  <rect class="box" x="540" y="250" width="236" height="128"/>
+  <rect x="556" y="266" width="44" height="44" fill="#EF3A78"/>
+  <text class="m ink" x="578" y="295" font-size="19" font-weight="700" text-anchor="middle">04</text>
+  <text class="t" x="556" y="338" font-size="19" font-weight="600">Make it yours</text>
+  <text class="t dim" x="556" y="362" font-size="15">Name, colours and app id</text>
+
+  <!-- 05 -->
+  <rect x="24" y="408" width="752" height="88" fill="#17151B" stroke="#9B3FA0" stroke-width="2"/>
+  <rect x="40" y="430" width="44" height="44" fill="#9B3FA0"/>
+  <text class="m" x="62" y="459" font-size="19" font-weight="700" text-anchor="middle">05</text>
+  <text class="t" x="104" y="448" font-size="19" font-weight="600">Use a coding agent</text>
+  <text class="t dim" x="104" y="474" font-size="15">Claude Code, Codex or Cursor can walk any of these paths with you.</text>
+</svg>

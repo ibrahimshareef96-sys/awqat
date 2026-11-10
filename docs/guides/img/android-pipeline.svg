@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" role="img" aria-labelledby="ap-title ap-desc">
+  <title id="ap-title">From clone to Android phone</title>
+  <desc id="ap-desc">Four steps from top to bottom. One, npm run build makes the dist folder. Two, npx cap sync android copies it into the android folder. Three, gradlew assembleDebug makes app-debug.apk. Four, Run in Android Studio sends it over USB and Awqat opens on the phone. The shortcut npm run apk does steps one to three.</desc>
+  <style>
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #F2ECE4; }
+    .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #F5D3A1; }
+    .n { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #0B0A0D; }
+    .dim { fill: #B5AEA6; }
+    .box { fill: #17151B; stroke: #3A3540; stroke-width: 2; }
+    .line { fill: none; stroke: #B5AEA6; stroke-width: 2; }
+  </style>
+  <defs>
+    <marker id="ap-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#B5AEA6"/>
+    </marker>
+  </defs>
+  <rect width="800" height="500" fill="#0B0A0D"/>
+
+  <text class="t" x="24" y="46" font-size="26" font-weight="600">From clone to Android phone</text>
+  <text class="t dim" x="24" y="74" font-size="16">What happens, the command that does it, and what it makes.</text>
+
+  <rect class="box" x="24" y="98" width="752" height="60"/>
+  <rect x="38" y="112" width="32" height="32" fill="#F5D3A1"/>
+  <text class="n" x="54" y="134" font-size="17" font-weight="700" text-anchor="middle">1</text>
+  <text class="t" x="86" y="134" font-size="18" font-weight="600">Build the web app</text>
+  <text class="m" x="310" y="134" font-size="15">npm run build</text>
+  <text class="t dim" x="560" y="134" font-size="15">makes dist/</text>
+  <path class="line" d="M400 158 V178" marker-end="url(#ap-arrow)"/>
+
+  <rect class="box" x="24" y="182" width="752" height="60"/>
+  <rect x="38" y="196" width="32" height="32" fill="#F89A5B"/>
+  <text class="n" x="54" y="218" font-size="17" font-weight="700" text-anchor="middle">2</text>
+  <text class="t" x="86" y="218" font-size="18" font-weight="600">Copy it into Android</text>
+  <text class="m" x="310" y="218" font-size="15">npx cap sync android</text>
+  <text class="t dim" x="560" y="218" font-size="15">fills android/</text>
+  <path class="line" d="M400 242 V262" marker-end="url(#ap-arrow)"/>
+
+  <rect class="box" x="24" y="266" width="752" height="60"/>
+  <rect x="38" y="280" width="32" height="32" fill="#F4664F"/>
+  <text class="n" x="54" y="302" font-size="17" font-weight="700" text-anchor="middle">3</text>
+  <text class="t" x="86" y="302" font-size="18" font-weight="600">Build the APK</text>
+  <text class="m" x="310" y="302" font-size="15">./gradlew assembleDebug</text>
+  <text class="t dim" x="560" y="302" font-size="15">makes app-debug.apk</text>
+  <path class="line" d="M400 326 V346" marker-end="url(#ap-arrow)"/>
+
+  <rect x="24" y="350" width="752" height="60" fill="#17151B" stroke="#EF3A78" stroke-width="2"/>
+  <rect x="38" y="364" width="32" height="32" fill="#EF3A78"/>
+  <text class="n" x="54" y="386" font-size="17" font-weight="700" text-anchor="middle">4</text>
+  <text class="t" x="86" y="386" font-size="18" font-weight="600">Send it over USB</text>
+  <text class="t" x="310" y="386" font-size="15" style="fill:#F5D3A1">Run in Android Studio</text>
+  <text class="t dim" x="560" y="386" font-size="15">Awqat opens on the phone</text>
+
+  <rect x="24" y="432" width="8" height="44" fill="#9B3FA0"/>
+  <text class="t" x="46" y="452" font-size="16" font-weight="600">Shortcut</text>
+  <text class="t dim" x="46" y="474" font-size="15">One command, npm run apk, does steps 1 to 3 for you.</text>
+</svg>

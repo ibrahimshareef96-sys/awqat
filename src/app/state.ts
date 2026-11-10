@@ -20,6 +20,8 @@ import { emptyAgenda, type Agenda } from "../agenda/agenda.ts";
 import { emptyBody, type BodyLog } from "../body/body.ts";
 import type { Availability } from "../body/health.ts";
 import type { BodySummary, RawHealth } from "../body/summary.ts";
+import { emptyFood, type FoodLog } from "../food/food.ts";
+import type { FoodDraft } from "../food/draft.ts";
 import { emptyLearn, type Learn } from "../learn/learn.ts";
 import { emptyModeLog, type ModeLog } from "../modes/modes.ts";
 import { emptyMoney, type Money } from "../money/money.ts";
@@ -153,6 +155,10 @@ export const state = {
   },
   weightRemoveArmed: null as number | null,
   liftRemoveArmed: null as string | null,
+  /** Food (food/food.ts): the meals and the goals; the meal still on the form; the meal one tap from going. */
+  food: emptyFood() as FoodLog,
+  foodDraft: null as FoodDraft | null,
+  mealRemoveArmed: null as string | null,
   /** Money (money/money.ts); which sheet is open; the row one tap from going or being paid. */
   money: emptyMoney() as Money,
   /** The dhikr being counted on the lock screen and the island: its live.ts key. Kept in memory: it lasts this run. */
