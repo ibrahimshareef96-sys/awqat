@@ -1,0 +1,44 @@
+name: An idea
+description: Something Awqat could do, or do better.
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Awqat keeps a few promises (AGENTS.md): no Quran text bundled, nothing leaves the phone unless you set it up,
+        no streaks, scores or guilt, and motion you can turn off. Ideas that keep them are the ones that get built.
+  - type: textarea
+    id: need
+    attributes:
+      label: What you want to do
+      description: The moment in your day where this would help. Start with the need, not the button.
+      placeholder: After Isha I want to see what I planned for tomorrow before I sleep, without opening the agenda.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: How you do it today
+      description: Another app, paper, a workaround, or not at all.
+  - type: textarea
+    id: shape
+    attributes:
+      label: What it could look like
+      description: Optional. A sketch, a screenshot of another app, or a few words.
+  - type: dropdown
+    id: data
+    attributes:
+      label: Would it need the internet or an account
+      options:
+        - "No, it works on the phone alone"
+        - "Yes, a public source (say which below)"
+        - "Yes, the user's own server"
+        - "Not sure"
+    validations:
+      required: true
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Help
+      options:
+        - label: I would like to build this myself and open a pull request.

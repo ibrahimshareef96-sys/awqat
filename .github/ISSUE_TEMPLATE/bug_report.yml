@@ -1,0 +1,82 @@
+name: Something is wrong
+description: A screen, a time, a widget or a build that does not do what it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. Please leave out anything personal: your exact location, names, money amounts
+        or health records. "Dubai", "about 3 km" or "a meal of 500 kcal" is plenty.
+
+        A security problem goes through the Security tab instead (see SECURITY.md), never a public issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, and what you expected to see.
+      placeholder: I opened the Quran screen from the widget and it showed page 1 instead of my last page.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to see it again
+      placeholder: |
+        1. Add the Quran widget
+        2. Read to page 50 and close the app
+        3. Tap the widget
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part
+      options:
+        - Prayer times or reminders
+        - Quran, recitation or memorise
+        - Adhkar and du'a
+        - Agenda, weekly review or inbox
+        - Body (training, food, sleep, weight)
+        - Money, books or learning
+        - Widgets, lock screen or voice shortcuts
+        - Sync or the optional backend
+        - Building the app or make-it-yours
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - Android phone
+        - Android tablet or foldable
+        - iPhone
+        - iPad
+        - Browser (npm run dev)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version and device
+      description: Settings shows the version. Add the phone model and the Android or iOS version.
+      placeholder: 0.1.0 on a Pixel 9, Android 17
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots or log lines
+      description: Optional. Crop out anything personal first.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send it
+      options:
+        - label: I searched the open issues and this is not one of them.
+          required: true
+        - label: There is nothing personal in what I wrote or attached.
+          required: true

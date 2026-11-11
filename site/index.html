@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; font-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Awqat, the Muslim personal OS</title>
+  <meta name="description" content="Awqat is a free, open-source phone app that runs your day on the five prayer times. Prayer, Quran, dhikr, study, books, training, food and money in one place. No account, no analytics, no ads.">
+  <link rel="canonical" href="https://projectyou.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Awqat, the Muslim personal OS">
+  <meta property="og:description" content="Your day, set by the five prayers. Free and open source, for Android, iPhone and iPad.">
+  <meta property="og:url" content="https://projectyou.app/">
+  <meta property="og:image" content="https://projectyou.app/awqat-social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0B0A0D">
+  <link rel="icon" href="awqat-mark.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/Geist-Variable.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the page</a>
+
+  <header class="top">
+    <a class="brand" href="./" aria-label="Awqat home">
+      <img src="awqat-mark.svg" alt="" width="28" height="30">
+      <span>awqat</span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#what">What it does</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#build">Build your own</a>
+      <a class="nav-gh" href="https://github.com/ibrahimshareef96-sys/awqat">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <p class="label">Open source · MIT · Android, iPhone and iPad</p>
+      <h1>Your day, set by the five prayers.</h1>
+      <p class="ar" lang="ar" dir="rtl">أوقات</p>
+      <p class="lede">Awqat ("the times") is a calm phone app that runs your day on the prayer times. Prayer, Quran,
+        dhikr, study, books, training, food and money live in one place, and the screen changes with the time of day.
+        After Fajr it opens on the morning adhkar. On Friday it asks about Al-Kahf. After Isha it brings up what you set
+        yourself to study.</p>
+      <div class="ctas">
+        <a class="btn primary" href="https://github.com/ibrahimshareef96-sys/awqat/releases/latest">Download for Android</a>
+        <a class="btn" href="https://github.com/ibrahimshareef96-sys/awqat">See the code</a>
+      </div>
+      <p class="fine">The Android app is on the latest release. iPhone and iPad: build it with Xcode on a Mac,
+        <a href="https://github.com/ibrahimshareef96-sys/awqat/blob/main/docs/guides/03-iphone-ipad.md">step by step</a>.</p>
+      <ol class="dusk" aria-label="The five prayers">
+        <li class="fajr">Fajr</li><li class="dhuhr">Dhuhr</li><li class="asr">Asr</li><li class="maghrib">Maghrib</li><li class="isha">Isha</li>
+      </ol>
+    </section>
+
+    <section class="shots" aria-label="Screens">
+      <figure><img src="screenshots/home.jpg" alt="Home after Dhuhr: the dhikr after the salam, the next prayer and the Quran page" width="390" height="844" loading="lazy"><figcaption>Home</figcaption></figure>
+      <figure><img src="screenshots/faith.jpg" alt="Faith: today's prayer times with the iqama after each" width="390" height="844" loading="lazy"><figcaption>Prayer</figcaption></figure>
+      <figure><img src="screenshots/training.jpg" alt="Training: today's plan, the workout timer and the lifts logged" width="390" height="844" loading="lazy"><figcaption>Training</figcaption></figure>
+      <figure><img src="screenshots/food.jpg" alt="Food: today's energy and protein against your own goals" width="390" height="844" loading="lazy"><figcaption>Food</figcaption></figure>
+    </section>
+
+    <section id="what" class="grid" aria-labelledby="what-h">
+      <h2 id="what-h">What it does</h2>
+      <article><h3>Prayer</h3><p>Times worked out on the phone for where you are, the iqama with your mosque's minutes,
+        a reminder at each prayer, and a log of what you prayed, with the prayers you owe.</p></article>
+      <article><h3>Quran</h3><p>The Madinah mushaf, all 604 pages, with notes, a bookmark that follows your reading, a
+        daily goal and a revision plan by juz. Downloadable for offline reading.</p></article>
+      <article><h3>Recite to find</h3><p>Recite three or four words and the page opens with the ayah lit. Memorise mode
+        hides a page and fills it in as you recite. The speech model runs on the phone.</p></article>
+      <article><h3>Adhkar</h3><p>The adhkar after the salam, morning and evening, with a tap ring for each count, and
+        how to say each one and what it means in English.</p></article>
+      <article><h3>Training and food</h3><p>A plan for each day, a workout timer on the lock screen, your lifts with
+        what to try next. Meals by text, photo or barcode, against goals you set.</p></article>
+      <article><h3>Weekly review</h3><p>A muhasabah in four short steps: the week's numbers, three questions, up to
+        three intentions, and the week ahead. Never one score.</p></article>
+      <article><h3>Study and books</h3><p>Tafsir, Hadith and Fiqh tracks with a weekly target and a timer, and a reading
+        list with a barcode scanner and a Goodreads import.</p></article>
+      <article><h3>Widgets and voice</h3><p>The next prayer, the Hijri date, today's page and the adhkar on your home
+        and lock screen. Siri phrases on iPhone, shortcuts and a tile on Android.</p></article>
+    </section>
+
+    <section id="privacy" class="band" aria-labelledby="privacy-h">
+      <h2 id="privacy-h">Your records stay on your phone</h2>
+      <p>No account. No server of ours. No analytics. No ads. Awqat reaches public services only for what you ask of it,
+        like the mushaf's fonts or a book's cover. Your recitation is heard on the phone and sent nowhere. No streaks,
+        no scores, no guilt.</p>
+      <p><a href="privacypolicy.html">Read the privacy policy</a></p>
+    </section>
+
+    <section id="build" class="grid two" aria-labelledby="build-h">
+      <h2 id="build-h">Make it yours</h2>
+      <article><h3>Free and open source</h3><p>MIT licensed. Fork it, give it your own name, icon and colours with one
+        command, and put it on your own phone or in the stores under your name.</p>
+        <p><a href="https://github.com/ibrahimshareef96-sys/awqat/blob/main/docs/guides/04-make-it-yours.md">Make it yours</a></p></article>
+      <article><h3>Built for coding agents</h3><p>The repository comes with guides with pictures for every step, and an
+        AGENTS.md so Claude Code, Codex or Cursor can build it for you.</p>
+        <p><a href="https://github.com/ibrahimshareef96-sys/awqat/tree/main/docs/guides">All the guides</a></p></article>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p><span class="mono">Built by <a href="https://itqanstudio.com">Itqan Studio</a></span> · Made by
+      <a href="https://shareefi.co">Ibrahim Shareef</a></p>
+    <p><a href="https://github.com/ibrahimshareef96-sys/awqat">GitHub</a> · <a href="privacypolicy.html">Privacy</a> ·
+      <a href="https://github.com/ibrahimshareef96-sys/awqat/issues/new/choose">Report a problem</a></p>
+  </footer>
+</body>
+</html>

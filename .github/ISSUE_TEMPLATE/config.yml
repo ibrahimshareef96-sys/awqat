@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem privately
+    url: https://github.com/ibrahimshareef96-sys/awqat/security/advisories/new
+    about: Anything that could expose a user's records goes here, never in a public issue.
+  - name: Build your own version
+    url: https://github.com/ibrahimshareef96-sys/awqat/tree/main/docs/guides
+    about: Step-by-step guides for Android, iPhone and iPad, your own name and brand, and working with a coding agent.

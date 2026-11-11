@@ -8,8 +8,8 @@ android {
         applicationId "app.awqat"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 26
-        versionName "0.19.1"
+        versionCode 1
+        versionName "0.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // Phones and tablets from the last decade are arm64; the scanner's native libraries for older chips and
         // emulators on Intel would add about 15 MB.

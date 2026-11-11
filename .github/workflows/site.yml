@@ -1,0 +1,39 @@
+name: Site
+
+# Publishes site/ (with the brand, the screenshots and the privacy policy copied in) to GitHub Pages.
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "brand/**", "docs/screenshots/**", "public/privacypolicy.html", ".github/workflows/site.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Assemble the page
+        run: |
+          mkdir -p _site/fonts _site/screenshots
+          cp site/index.html site/site.css site/CNAME _site/
+          cp brand/awqat-mark.svg brand/awqat-social.png _site/
+          cp brand/fonts/Geist-Variable.ttf brand/fonts/ReadexPro-Variable.ttf brand/fonts/OFL-*.txt _site/fonts/
+          cp docs/screenshots/*.jpg _site/screenshots/
+          cp public/privacypolicy.html _site/
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+      - id: deployment
+        uses: actions/deploy-pages@v5

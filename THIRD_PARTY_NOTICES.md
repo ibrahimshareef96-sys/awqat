@@ -1,6 +1,7 @@
 # Third-party notices
 
-Awqat's own code is MIT licensed (LICENSE). These parts belong to others and keep their own terms.
+Awqat's own code, the sky paintings in `public/sky` and the brand in `brand/` are MIT licensed (LICENSE). These parts
+belong to others and keep their own terms.
 
 ## Data bundled in the app
 

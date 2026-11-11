@@ -1,7 +1,7 @@
 {
   "name": "awqat",
   "private": true,
-  "version": "0.19.1",
+  "version": "0.1.0",
   "description": "Awqat, the Muslim personal OS: a calm life app that runs on the five prayer times, for Android, iPhone and iPad.",
   "license": "MIT",
   "type": "module",
