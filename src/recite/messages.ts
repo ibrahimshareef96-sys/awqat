@@ -17,4 +17,6 @@ export type FromWorker =
   | { type: "failed"; why: LoadProblem }
   | { type: "heard"; id: number; text: string }
   | { type: "found"; id: number; result: SearchResult }
-  | { type: "error"; id: number };
+  | { type: "error"; id: number }
+  /** A search was asked for and the Quran text, read just then, was missing or not the text (it is read lazily). */
+  | { type: "text-failed"; id: number };

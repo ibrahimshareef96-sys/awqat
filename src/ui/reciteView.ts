@@ -132,34 +132,102 @@ export function paintFind(root: ParentNode, flow: FindFlow, loudness: number): v
   if (progress) progress.textContent = `${Math.round(flow.progress * 100)}% of ${megabytes(DOWNLOAD_BYTES)} MB`;
 }
 
+/**
+ * What a problem says in the memorise bar, in a few words: the bar's line has a fixed height (two lines at 320 px), so
+ * the sheet's longer sentences (problemText) would not fit.
+ */
+const BAR_PROBLEM: Readonly<Record<ReciteProblem, string>> = {
+  mic: "The microphone is off. Turn it on in Settings.",
+  noMic: "No microphone to use here.",
+  audio: "The microphone would not start.",
+  away: "Listening stopped in the background.",
+  offline: "The download needs the internet.",
+  download: "The download did not finish.",
+  damaged: "The files were damaged. Download them again.",
+  model: "The speech model would not start.",
+  web: "Reciting works in the installed app.",
+};
+
 function memoriseLine(s: MemoriseSession): string {
-  if (s.problem) return problemText(s.problem);
+  if (s.problem) return BAR_PROBLEM[s.problem];
   const sum = summarise(s.m);
   const total = s.m.keys.length;
-  if (s.phase === "preparing") return "Getting the speech model ready…";
-  if (s.phase === "left") return `You turned away from ${s.pages.length > 1 ? "these pages" : `page ${s.page}`}.`;
-  if (sum.done) return "Every word is in. Tap Done to see how it went.";
+  if (s.phase === "preparing") return "Getting the model ready…";
+  if (s.phase === "left") return `You left ${s.pages.length > 1 ? "these pages" : `page ${s.page}`}.`;
+  if (sum.done) return "Every word is in. Tap Done.";
   if (s.phase === "paused") return `Paused. ${total - sum.hidden} of ${total} words.`;
-  return s.working > 0 ? "Listening, and filling in what it heard…" : "Listening. Recite from the top, or from anywhere on the page.";
+  return s.working > 0 ? "Filling in what you said…" : "Listening. Start anywhere.";
 }
 
-/** The bar under a page being memorised: what is happening, Peek, listen or pause, and Done. */
+/**
+ * Whether the bar's line is read out when it changes. While you recite it flips between "listening" and "filling in"
+ * with every stretch heard, which a screen reader would say over your own voice: those two are shown, not spoken. A
+ * problem, a pause, the end, and the model getting ready are spoken.
+ */
+const lineSpoken = (s: MemoriseSession): boolean =>
+  s.problem !== null || s.phase !== "listening" || summarise(s.m).done;
+
+/**
+ * The bar under a page being memorised: what is happening, Peek, listen or pause, and Done. While the page is heard it
+ * is painted in place (paintMemoriseBar, paintMemoriseLevel), so what is marked here must stay findable.
+ */
 export function memoriseBar(s: MemoriseSession): string {
-  const status = `<p class="small memorise-line" role="status">${esc(memoriseLine(s))}</p>`;
+  const live = lineSpoken(s) ? `role="status"` : `aria-live="off"`;
+  const status = `<p class="small memorise-line" ${live} data-memorise-line>${esc(memoriseLine(s))}</p>`;
   if (s.phase === "left") {
-    return `<footer class="reader-bottom">${status}<div class="reader-actions"><button type="button" class="pill solid" ` +
-      `data-action="memorise-back">Back to ${s.pages.length > 1 ? "the pages" : `page ${s.page}`}</button>` +
-      `<button type="button" class="pill" data-action="memorise-done">Done</button></div></footer>`;
+    return `<footer class="reader-bottom" data-memorise-bar="left">${status}<div class="reader-actions"><button type="button" ` +
+      `class="pill solid" data-action="memorise-back">Back to ${s.pages.length > 1 ? "the pages" : `page ${s.page}`}` +
+      `</button><button type="button" class="pill" data-action="memorise-done">Done</button></div></footer>`;
   }
   const listening = s.phase === "listening";
-  const ended = summarise(s.m).done;
+  const off = s.phase === "preparing" || summarise(s.m).done ? " disabled" : "";
   // A toggle keeps one name; whether it is on is said by aria-pressed, not by a changing label.
-  return `<footer class="reader-bottom">${status}<div class="reader-actions">` +
-    `<button type="button" class="pill" data-action="memorise-peek"${s.phase === "preparing" || ended ? " disabled" : ""}>Peek</button>` +
+  return `<footer class="reader-bottom" data-memorise-bar="on">${status}` +
+    `<div class="memorise-level" aria-hidden="true"><span></span></div><div class="reader-actions">` +
+    `<button type="button" class="pill" data-action="memorise-peek"${off}>Peek</button>` +
     `<button type="button" class="round mic-round${listening ? " listening" : ""}" data-action="memorise-toggle" ` +
-    `aria-pressed="${listening}" aria-label="Listen"${s.phase === "preparing" || ended ? " disabled" : ""}>` +
-    `${icon(listening ? "pause" : "mic", 20)}</button>` +
+    `aria-pressed="${listening}" aria-label="Listen"${off}>${icon(listening ? "pause" : "mic", 20)}</button>` +
     `<button type="button" class="pill solid" data-action="memorise-done">Done</button></div></footer>`;
+}
+
+const LEVEL_GAIN = 6;
+
+/** The voice's level, 0 to 1, on the memorise bar's meter: a transform set in place, as paintFind does. */
+export function paintMemoriseLevel(root: ParentNode, loudness: number): void {
+  const fill = root.querySelector<HTMLElement>(".memorise-level span");
+  if (fill) fill.style.transform = `scaleX(${Math.min(1, Math.max(0, loudness) * LEVEL_GAIN).toFixed(3)})`;
+}
+
+/** Sets a line's spoken or silent state before its words change, so the change is heard (or not) as it should be. */
+function setSpoken(line: HTMLElement, spoken: boolean): void {
+  if (spoken && line.getAttribute("role") !== "status") {
+    line.removeAttribute("aria-live");
+    line.setAttribute("role", "status");
+  } else if (!spoken && line.getAttribute("aria-live") !== "off") {
+    line.removeAttribute("role");
+    line.setAttribute("aria-live", "off");
+  }
+}
+
+/**
+ * The bar brought up to date without drawing the page again: its line, and whether Peek and listen are off. A change
+ * of phase (listening, paused, left) is a drawing of the bar, never this; the way-back bar is left as it is.
+ */
+export function paintMemoriseBar(root: ParentNode, s: MemoriseSession | null): void {
+  if (!s || s.phase === "left") return;
+  const bar = root.querySelector<HTMLElement>('[data-memorise-bar="on"]');
+  if (!bar) return;
+  const line = bar.querySelector<HTMLElement>("[data-memorise-line]");
+  if (line) {
+    const text = memoriseLine(s);
+    setSpoken(line, lineSpoken(s));
+    if (line.textContent !== text) line.textContent = text;
+  }
+  const off = s.phase === "preparing" || summarise(s.m).done;
+  bar.querySelectorAll<HTMLButtonElement>('[data-action="memorise-peek"], [data-action="memorise-toggle"]').forEach((button) => {
+    if (button.disabled !== off) button.disabled = off;
+  });
+  if (s.phase !== "listening") paintMemoriseLevel(bar, 0);
 }
 
 const MARK_TEXT: Readonly<Record<Exclude<WordMark, "said">, string>> = {
@@ -214,38 +282,78 @@ export function memoriseDoneSheet(s: MemoriseSession, lineOf: ReadonlyMap<string
 
 const MARK_CLASS: Readonly<Record<WordMark, string>> = { said: "", different: "m-diff", skipped: "m-skip", peeked: "m-peek" };
 const ALL_CLASSES = ["m-hid", "m-diff", "m-skip", "m-peek"];
+const PAINTED = ".w.m-hid, .w.m-diff, .w.m-skip, .w.m-peek";
+
+/** What each word was last painted as (its class, "" for a word said). A page drawn anew has new words: all unseen. */
+const painted = new WeakMap<HTMLElement, string>();
+/** The pages last painted in a root, so a different set is swept clean. */
+const paintedPages = new WeakMap<ParentNode, string>();
+/** A session's word keys to their places; the keys' array is the same through every stretch heard. */
+const places = new WeakMap<readonly string[], Map<string, number>>();
+
+function placesOf(keys: readonly string[]): Map<string, number> {
+  const known = places.get(keys);
+  if (known) return known;
+  const made = new Map(keys.map((key, i) => [key, i]));
+  places.set(keys, made);
+  return made;
+}
+
+/** Puts a painted word back as drawn: its label and tab stop returned, its marks off. */
+function unpaint(w: HTMLElement): void {
+  painted.delete(w);
+  if (!ALL_CLASSES.some((c) => w.classList.contains(c))) return;
+  w.classList.remove(...ALL_CLASSES);
+  if (w.dataset.label !== undefined) {
+    if (w.dataset.label) w.setAttribute("aria-label", w.dataset.label);
+    else w.removeAttribute("aria-label");
+    delete w.dataset.label;
+  }
+  w.removeAttribute("tabindex");
+}
+
+/** Paints one word as `want` (a mark's class, "m-hid" for a hidden word, or "" for a word said); nothing if it already is. */
+function paintWord(w: HTMLElement, want: string): void {
+  if (painted.get(w) === want && (want === "" || w.classList.contains(want))) return;
+  unpaint(w);
+  if (want === "m-hid") {
+    w.classList.add("m-hid");
+    w.dataset.label = w.getAttribute("aria-label") ?? "";
+    w.setAttribute("aria-label", "Hidden word");
+    w.setAttribute("tabindex", "-1");
+  } else if (want) w.classList.add(want);
+  painted.set(w, want);
+}
+
+/** Every painted word that is not on one of `keep`'s pages is put back as drawn. */
+function sweep(root: ParentNode, keep: readonly number[]): void {
+  root.querySelectorAll<HTMLElement>(PAINTED).forEach((w) => {
+    if (!keep.some((p) => w.closest(`[data-page="${p}"]`))) unpaint(w);
+  });
+}
 
 /**
  * The pages being memorised, painted in place over the words already drawn: a hidden word keeps its place on its line
  * (its ink is clear), so nothing moves as words fill in. It is out of the tab order, and its label says only that it
- * is hidden, so neither a keyboard nor a screen reader gives the word away.
+ * is hidden, so neither a keyboard nor a screen reader gives the word away. Only the words whose mark changed since
+ * the last paint are touched (a page drawn anew has new words, so it is painted whole).
  */
 export function paintMemorise(root: ParentNode, s: MemoriseSession | null): void {
+  const active = s !== null && s.phase !== "left";
   const reader = root.querySelector<HTMLElement>(".reader");
-  reader?.classList.toggle("memorising", s !== null && s.phase !== "left");
-  root.querySelectorAll<HTMLElement>(".w.m-hid, .w.m-diff, .w.m-skip, .w.m-peek").forEach((w) => {
-    w.classList.remove(...ALL_CLASSES);
-    if (w.dataset.label !== undefined) {
-      if (w.dataset.label) w.setAttribute("aria-label", w.dataset.label);
-      else w.removeAttribute("aria-label");
-      delete w.dataset.label;
-    }
-    w.removeAttribute("tabindex");
-  });
-  if (!s || s.phase === "left") return;
-  const index = new Map(s.m.keys.map((key, i) => [key, i]));
-  const pages = s.pages.map((p) => `[data-page="${Math.trunc(p)}"] .w[data-word]`).join(", ");
-  if (!pages) return;
-  root.querySelectorAll<HTMLElement>(pages).forEach((w) => {
+  if (reader && reader.classList.contains("memorising") !== active) reader.classList.toggle("memorising", active);
+  const pages = active ? s.pages.map((p) => Math.trunc(p)) : [];
+  const signature = pages.join(",");
+  if (!active || paintedPages.get(root) !== signature) sweep(root, pages);
+  paintedPages.set(root, signature);
+  if (!active || pages.length === 0) return;
+  const index = placesOf(s.m.keys);
+  const selector = pages.map((p) => `[data-page="${p}"] .w[data-word]`).join(", ");
+  root.querySelectorAll<HTMLElement>(selector).forEach((w) => {
     const i = index.get(w.dataset.word ?? "");
     if (i === undefined) return;
     const mark = s.m.marks[i];
-    if (mark === null) {
-      w.classList.add("m-hid");
-      w.dataset.label = w.getAttribute("aria-label") ?? "";
-      w.setAttribute("aria-label", "Hidden word");
-      w.setAttribute("tabindex", "-1");
-    } else if (MARK_CLASS[mark]) w.classList.add(MARK_CLASS[mark]);
+    paintWord(w, mark === null ? "m-hid" : MARK_CLASS[mark]);
   });
 }
 

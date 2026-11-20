@@ -136,8 +136,8 @@ touch:
 - The icon, the colours and the skies. Those are the next sections.
 - The copies Capacitor makes inside `android/` and `ios/`. `npx cap sync` rewrites them.
 
-One line the app shows does change: the foot of the Settings screen, "Awqat 0.19, open source (MIT)", becomes
-"My App 0.19, open source (MIT)". The credits after it stay. If you want to say where your app came from, add
+One line the app shows does change: the foot of the Settings screen, "Awqat 0.2.0, open source (MIT)", becomes
+"My App 0.2.0, open source (MIT)". The credits after it stay. If you want to say where your app came from, add
 "based on Awqat" there, in `src/ui/views.ts`.
 
 If the command prints "These lines still say the old name", open each line it lists and change the word by hand. It

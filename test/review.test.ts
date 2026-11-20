@@ -107,12 +107,23 @@ describe("the four steps", () => {
   const numbers = weekReview(input());
 
   it("are on one screen in order: look back, reflect, intentions, look ahead", () => {
-    const text = words(weekReviewView(screen(numbers), "", "", ""));
-    const at = ["LOOK BACK", "REFLECT", "INTENTIONS", "LOOK AHEAD"].map((step) => text.indexOf(step));
+    const html = weekReviewView(screen(numbers), "", "", "");
+    const text = words(html);
+    const at = ["Look back", "Reflect", "Intentions", "Look ahead"].map((step) => text.indexOf(step));
     expect(at.every((i) => i >= 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
     expect(text.indexOf("Prayers on time")).toBeGreaterThan(at[0]);
     expect(text.indexOf("Prayers on time")).toBeLessThan(at[1]);
+  });
+
+  it("names each step large over its cards, with which step it is and one line on what it is for", () => {
+    const html = weekReviewView(screen(numbers), "", "", "");
+    expect(html.match(/class="section-title"/g)?.length).toBe(4);
+    for (const n of [1, 2, 3, 4]) expect(html).toContain(`<p class="section-step">Step ${n} of 4</p>`);
+    expect(html).toContain('<h2 class="section-title">Look back</h2><p class="section-about">Your week in numbers, from your own records.</p>');
+    expect(html).toContain("Three questions. Each is optional.");
+    // The cards' own labels stay a level below the steps.
+    expect(html).toContain('<h3 class="label group-title">WORSHIP, LAST 7 DAYS</h3>');
   });
 
   it("asks the three questions in labelled fields of at most 600 characters, and three short intentions", () => {

@@ -10,6 +10,14 @@ Two features, one engine, all on the phone.
   peeked one in sand. At the end, the slips can be kept as revision mistakes on their words, so they show on the page
   and among the muraja'ah plan's weak pages.
 
+The speech model loads first, with one warm-up run. The Quran text for searching is read only at the first "recite to
+find" (memorise never needs it); if it is missing or is not the text, the download is taken off the phone and offered
+again, while a read that merely fails keeps it. After the reader closes the model is let go three minutes later, not
+at once, so opening the reader again is instant. While you recite, each heard stretch updates the page in place and
+repaints only the words whose mark changed; the bar's status line keeps one height and is read out by a screen reader
+only for a pause, a problem, the end, or the model getting ready. Revealed words fade in (not with reduced motion), and a
+small level meter shows your voice.
+
 Words are checked, not tajweed. The model can mishear on a phone microphone in a noisy room, so every slip can be
 cleared with a tap ("It was right").
 

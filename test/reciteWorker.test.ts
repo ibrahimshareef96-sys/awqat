@@ -6,8 +6,9 @@ import type { FromWorker, ToWorker } from "../src/recite/messages.ts";
 
 const search = vi.hoisted(() => ({ buildIndex: vi.fn(() => ({})), searchRecitation: vi.fn() }));
 const asr = vi.hoisted(() => ({ pipeline: vi.fn() }));
+const tanzil = vi.hoisted(() => ({ parseTanzil: vi.fn() }));
 vi.mock("../src/recite/search.ts", () => search);
-vi.mock("../src/recite/tanzil.ts", () => ({ parseTanzil: vi.fn(() => ({ verses: [] })) }));
+vi.mock("../src/recite/tanzil.ts", () => tanzil);
 vi.mock("@huggingface/transformers", () => ({
   env: { backends: { onnx: { wasm: {} } } },
   pipeline: asr.pipeline,
@@ -31,6 +32,8 @@ const LOAD: ToWorker = { type: "load", base: "/files/recite/", tanzil: "/files/r
 beforeEach(async () => {
   vi.resetModules();
   search.searchRecitation.mockReset();
+  search.buildIndex.mockClear();
+  tanzil.parseTanzil.mockReset().mockReturnValue({ verses: [] });
   asr.pipeline.mockReset();
   asr.pipeline.mockResolvedValue(async () => ({ text: "heard" }));
   worker = { onmessage: null, postMessage: vi.fn(), location: { href: "https://localhost/assets/worker.js" } };
@@ -124,6 +127,105 @@ describe("the speech worker", () => {
     send({ ...LOAD, checked: false });
     await flush();
     expect(said()).toEqual([{ type: "failed", why: "model" }]);
+  });
+
+  it("is ready as soon as the model is, without reading the Quran text", async () => {
+    const fetched = vi.fn(async () => new Response("1|1|text"));
+    vi.stubGlobal("fetch", fetched);
+    send(LOAD);
+    await flush();
+    expect(said()).toEqual([{ type: "ready", checked: true }]);
+    expect(fetched).not.toHaveBeenCalled();
+    expect(tanzil.parseTanzil).not.toHaveBeenCalled();
+    expect(search.buildIndex).not.toHaveBeenCalled();
+  });
+
+  it("runs the model once on a second of silence before it says ready", async () => {
+    const run = vi.fn(async () => ({ text: "" }));
+    const order: string[] = [];
+    run.mockImplementation(async () => { order.push("warm"); return { text: "" }; });
+    worker.postMessage.mockImplementation((message: FromWorker) => { order.push(message.type); });
+    asr.pipeline.mockResolvedValue(run);
+    send(LOAD);
+    await flush();
+    expect(run).toHaveBeenCalledTimes(1);
+    const [audio] = run.mock.calls[0] as unknown as [Float32Array];
+    expect(audio).toBeInstanceOf(Float32Array);
+    expect(audio.length).toBe(16_000);
+    expect(audio.every((sample) => sample === 0)).toBe(true);
+    expect(order).toEqual(["warm", "ready"]);
+  });
+
+  it("is still ready when the warm-up run fails", async () => {
+    asr.pipeline.mockResolvedValue(async () => { throw new Error("no memory"); });
+    send(LOAD);
+    send({ type: "hear", id: 1, audio: new Float32Array(160) });
+    await flush();
+    expect(said()[0]).toEqual({ type: "ready", checked: true });
+    expect(said()[1]).toEqual({ type: "error", id: 1 });
+  });
+
+  it("reads the text and builds the search the first time a search is asked for, and only then", async () => {
+    const fetched = vi.fn(async () => new Response("1|1|text"));
+    vi.stubGlobal("fetch", fetched);
+    search.searchRecitation.mockReturnValue({ kind: "none" });
+    send(LOAD);
+    await flush();
+    send({ type: "find", id: 8, text: "words" });
+    send({ type: "find", id: 9, text: "words" });
+    await flush();
+    expect(said()).toContainEqual({ type: "found", id: 8, result: { kind: "none" } });
+    expect(said()).toContainEqual({ type: "found", id: 9, result: { kind: "none" } });
+    expect(fetched).toHaveBeenCalledTimes(1);
+    expect(fetched).toHaveBeenCalledWith("/files/recite/tanzil.txt");
+    expect(search.buildIndex).toHaveBeenCalledTimes(1);
+  });
+
+  it("says the text is damaged, at the first search, when it is not the Quran text", async () => {
+    tanzil.parseTanzil.mockReturnValue({ error: "notTanzil" });
+    send(LOAD);
+    send({ type: "find", id: 10, text: "words" });
+    await flush();
+    expect(said()).toEqual([{ type: "ready", checked: true }, { type: "text-failed", id: 10 }]);
+    expect(search.searchRecitation).not.toHaveBeenCalled();
+  });
+
+  it("says the text is damaged, at the search, when the file is not there; hearing still works", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
+    send(LOAD);
+    send({ type: "find", id: 11, text: "words" });
+    send({ type: "hear", id: 12, audio: new Float32Array(160) });
+    await flush();
+    expect(said()).toContainEqual({ type: "text-failed", id: 11 });
+    expect(said()).toContainEqual({ type: "heard", id: 12, text: "heard" });
+    expect(tanzil.parseTanzil).not.toHaveBeenCalled();
+  });
+
+  it("answers with an error, not a damaged text, when the text could not be read this time, and reads it again next time", async () => {
+    // A read that fails, or one the web view answers oddly, says nothing about the file: the download is kept.
+    const fetched = vi.fn<() => Promise<Response>>()
+      .mockRejectedValueOnce(new TypeError("read failed"))
+      .mockResolvedValueOnce(new Response("", { status: 500 }))
+      .mockResolvedValue(new Response("1|1|text"));
+    vi.stubGlobal("fetch", fetched);
+    search.searchRecitation.mockReturnValue({ kind: "none" });
+    send(LOAD);
+    send({ type: "find", id: 13, text: "words" });
+    send({ type: "find", id: 14, text: "words" });
+    send({ type: "find", id: 15, text: "words" });
+    await flush();
+    expect(said()).toContainEqual({ type: "error", id: 13 });
+    expect(said()).toContainEqual({ type: "error", id: 14 });
+    expect(said()).toContainEqual({ type: "found", id: 15, result: { kind: "none" } });
+    expect(said().some((message) => message.type === "text-failed")).toBe(false);
+  });
+
+  it("answers with an error when the index cannot be built for want of memory", async () => {
+    search.buildIndex.mockImplementationOnce(() => { throw new RangeError("out of memory"); });
+    send(LOAD);
+    send({ type: "find", id: 16, text: "words" });
+    await flush();
+    expect(said()).toContainEqual({ type: "error", id: 16 });
   });
 
   it("still handles the next message when even an error could not be sent", async () => {

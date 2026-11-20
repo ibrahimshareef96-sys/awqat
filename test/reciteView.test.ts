@@ -5,8 +5,13 @@ import { describe, expect, it } from "vitest";
 import { hearChunk, peek, startMemorise } from "../src/recite/align.ts";
 import { closedFind, type FindFlow, type MemoriseSession } from "../src/recite/session.ts";
 import { pageOfAyah } from "../src/quran/pages.ts";
-import { memoriseBar, memoriseDoneSheet, paintLit, paintMemorise, placeName, reciteSheet } from "../src/ui/reciteView.ts";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { memoriseBar, memoriseDoneSheet, paintLit, paintMemorise, paintMemoriseBar, paintMemoriseLevel, placeName,
+  reciteSheet } from "../src/ui/reciteView.ts";
+import type { ReciteProblem } from "../src/recite/session.ts";
 
+const css = (file: string): string => readFileSync(resolve(process.cwd(), "src/ui", file), "utf8");
 const flow = (change: Partial<FindFlow>): FindFlow => ({ ...closedFind(), ...change });
 const WORDS = ["ذهب", "الرجل", "الى", "السوق"].map((text, i) => ({ key: `18:10:${i + 1}`, text }));
 const session = (change: Partial<MemoriseSession> = {}): MemoriseSession =>
@@ -108,7 +113,7 @@ describe("the recite-to-find sheet", () => {
 describe("the memorise bar", () => {
   it("cannot peek or listen while the model gets ready", () => {
     const html = memoriseBar(session({ phase: "preparing" }));
-    expect(html).toContain("Getting the speech model ready");
+    expect(html).toContain("Getting the model ready");
     expect(html).toMatch(/memorise-peek" disabled/);
     expect(html).toMatch(/memorise-toggle"[^>]*disabled/);
   });
@@ -120,12 +125,154 @@ describe("the memorise bar", () => {
 
   it("offers the way back when the page was turned", () => {
     expect(memoriseBar(session({ phase: "left" }))).toContain("Back to page 294");
+    expect(memoriseBar(session({ phase: "left" }))).toContain("You left page 294.");
     expect(memoriseBar(session({ phase: "left", pages: [293, 294] }))).toContain("Back to the pages");
   });
 
   it("says when every word is in", () => {
     const done = session({ m: hearChunk(startMemorise(WORDS), "ذهب الرجل الى السوق") });
     expect(memoriseBar(done)).toContain("Every word is in");
+  });
+});
+
+const lineOf = (html: string): string => html.match(/data-memorise-line[^>]*>([^<]*)</)?.[1] ?? "";
+const everyWordIn = hearChunk(startMemorise(WORDS), "ذهب الرجل الى السوق");
+
+describe("the memorise bar's steady height", () => {
+  const PROBLEMS: ReciteProblem[] = ["mic", "noMic", "audio", "away", "offline", "download", "damaged", "model", "web"];
+
+  it("says each state in a few plain words, never more than two lines at 320 px", () => {
+    const states = [session({ phase: "preparing" }), session(), session({ working: 1 }), session({ phase: "paused" }),
+      session({ phase: "left" }), session({ phase: "left", pages: [293, 294] }), session({ m: everyWordIn }),
+      ...PROBLEMS.map((problem) => session({ phase: "paused", problem }))];
+    for (const s of states) {
+      const line = lineOf(memoriseBar(s));
+      expect(line.length).toBeGreaterThan(0);
+      // 13px text is about 6.3px a letter, and the bar's line is at most 288px wide at 320px: two lines hold ~90.
+      expect(line.length).toBeLessThanOrEqual(60);
+    }
+  });
+
+  it("says the same things in fewer words", () => {
+    expect(lineOf(memoriseBar(session({ phase: "preparing" })))).toBe("Getting the model ready…");
+    expect(lineOf(memoriseBar(session()))).toBe("Listening. Start anywhere.");
+    expect(lineOf(memoriseBar(session({ working: 2 })))).toBe("Filling in what you said…");
+    expect(lineOf(memoriseBar(session({ phase: "paused", m: hearChunk(startMemorise(WORDS), "ذهب") })))).toBe("Paused. 1 of 4 words.");
+    expect(lineOf(memoriseBar(session({ m: everyWordIn })))).toBe("Every word is in. Tap Done.");
+    expect(lineOf(memoriseBar(session({ phase: "left", pages: [293, 294] })))).toBe("You left these pages.");
+  });
+
+  it("keeps one line element and one level meter, so the bar has the same parts in every listening state", () => {
+    for (const s of [session(), session({ working: 1 }), session({ phase: "paused" }), session({ phase: "preparing" })]) {
+      const html = memoriseBar(s);
+      expect(html.match(/data-memorise-line/g)).toHaveLength(1);
+      expect(html).toContain('data-memorise-bar="on"');
+      expect(html.match(/class="memorise-level"/g)).toHaveLength(1);
+    }
+  });
+
+  it("reserves the line's height in the style sheet, whatever it says", () => {
+    const rule = css("mushaf.css").match(/\.memorise-line \{[^}]*\}/)?.[0] ?? "";
+    expect(rule).toMatch(/\bheight: \d/);
+    expect(rule).toContain("overflow: hidden");
+    expect(rule).not.toMatch(/min-height|max-height/);
+  });
+});
+
+describe("the memorise bar painted in place", () => {
+  const bar = (s: MemoriseSession): HTMLElement => {
+    const root = document.createElement("div");
+    root.innerHTML = `<main class="reader">${memoriseBar(s)}</main>`;
+    return root;
+  };
+
+  it("changes the line's text and the buttons' state without replacing anything", () => {
+    const root = bar(session());
+    const line = root.querySelector("[data-memorise-line]");
+    const peekButton = root.querySelector('[data-action="memorise-peek"]');
+    paintMemoriseBar(root, session({ working: 1 }));
+    expect(root.querySelector("[data-memorise-line]")).toBe(line);
+    expect(line?.textContent).toBe("Filling in what you said…");
+    paintMemoriseBar(root, session({ working: 0 }));
+    expect(line?.textContent).toBe("Listening. Start anywhere.");
+    paintMemoriseBar(root, session({ m: everyWordIn }));
+    expect(line?.textContent).toBe("Every word is in. Tap Done.");
+    expect(root.querySelector('[data-action="memorise-peek"]')).toBe(peekButton);
+    expect((peekButton as HTMLButtonElement).disabled).toBe(true);
+    expect((root.querySelector('[data-action="memorise-toggle"]') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("shows, but does not read out, the line that flips with every stretch heard; reads out the rest", () => {
+    // While you recite, a screen reader stays quiet over your voice.
+    const root = bar(session());
+    const line = root.querySelector("[data-memorise-line]") as HTMLElement;
+    expect(line.getAttribute("aria-live")).toBe("off");
+    expect(line.hasAttribute("role")).toBe(false);
+    paintMemoriseBar(root, session({ working: 1 }));
+    expect(line.getAttribute("aria-live")).toBe("off");
+    // The end of the page is said, and so are a pause, a problem and the model getting ready.
+    paintMemoriseBar(root, session({ m: everyWordIn }));
+    expect(line.getAttribute("role")).toBe("status");
+    expect(line.hasAttribute("aria-live")).toBe(false);
+    paintMemoriseBar(root, session({ working: 1 }));
+    expect(line.getAttribute("aria-live")).toBe("off");
+    expect(line.hasAttribute("role")).toBe(false);
+    for (const spoken of [session({ phase: "paused" }), session({ phase: "preparing" }), session({ problem: "audio" }), session({ phase: "left" })]) {
+      expect(memoriseBar(spoken)).toContain('role="status" data-memorise-line');
+    }
+    expect(memoriseBar(session())).toContain('aria-live="off" data-memorise-line');
+  });
+
+  it("leaves the line alone when it already says it", () => {
+    const root = bar(session());
+    const watch = new MutationObserver(() => undefined);
+    watch.observe(root, { attributes: true, childList: true, characterData: true, subtree: true });
+    paintMemoriseBar(root, session());
+    expect(watch.takeRecords()).toHaveLength(0);
+    watch.disconnect();
+  });
+
+  it("never paints the way-back bar, or a session that has ended", () => {
+    const root = bar(session({ phase: "left" }));
+    paintMemoriseBar(root, session({ working: 1 }));
+    expect(lineOf(root.innerHTML)).toBe("You left page 294.");
+    paintMemoriseBar(root, null);
+    paintMemoriseBar(root, session({ phase: "left" }));
+    expect(lineOf(root.innerHTML)).toBe("You left page 294.");
+  });
+
+  it("moves the level meter with a transform, within 0 and 1", () => {
+    const root = bar(session());
+    const fill = root.querySelector<HTMLElement>(".memorise-level span");
+    paintMemoriseLevel(root, 0.05);
+    expect(fill?.style.transform).toBe("scaleX(0.300)");
+    paintMemoriseLevel(root, 0.9);
+    expect(fill?.style.transform).toBe("scaleX(1.000)");
+    paintMemoriseLevel(root, 0);
+    expect(fill?.style.transform).toBe("scaleX(0.000)");
+    expect(() => paintMemoriseLevel(document.createElement("div"), 0.3)).not.toThrow();
+  });
+
+  it("rests the meter once it is no longer listening", () => {
+    const root = bar(session());
+    paintMemoriseLevel(root, 0.1);
+    paintMemoriseBar(root, session({ phase: "paused" }));
+    expect(root.querySelector<HTMLElement>(".memorise-level span")?.style.transform).toBe("scaleX(0.000)");
+  });
+});
+
+describe("the memorise styles", () => {
+  it("fades a revealed word's ink in over 160 ms, colour only, and never animates a word being hidden", () => {
+    const word = css("mushaf.css").match(/\n\.w \{[^}]*\}/)?.[0] ?? "";
+    expect(word).toMatch(/transition: [^;]*background-color 300ms ease-out, color 160ms ease-out;/);
+    expect(word).not.toMatch(/transition: [^;]*(width|height|transform|margin|padding|all)/);
+    expect(css("mushaf.css")).toMatch(/\.reader\.memorising \.w\.m-hid \{[^}]*transition: none;/);
+  });
+
+  it("is covered by reduced motion: every transition is off, and the meter's own rule says so", () => {
+    expect(css("app.css")).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\*, ::before, ::after \{ transition: none !important;/);
+    expect(css("mushaf.css")).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[^@]*\.memorise-level span \{ transition: none; \}/);
+    expect(css("mushaf.css")).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.page-lines, \.w \{ transition: none; \}/);
   });
 });
 
@@ -245,6 +392,58 @@ describe("painting a memorised page", () => {
     expect(root.querySelectorAll('[data-page="294"] .m-hid').length).toBe(2);
     expect(root.querySelector('[data-word="18:10:1"]')?.getAttribute("aria-label")).toBe("a");
     expect(root.querySelector('[data-word="18:10:1"]')?.hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("touches only the words whose mark changed since the last paint", () => {
+    const root = page();
+    const first = startMemorise(WORDS);
+    paintMemorise(root, session({ m: first }));
+    const watch = new MutationObserver(() => undefined);
+    watch.observe(root, { attributes: true, childList: true, subtree: true });
+    paintMemorise(root, session({ m: first }));
+    expect(watch.takeRecords()).toHaveLength(0);
+    paintMemorise(root, session({ m: hearChunk(first, "ذهب") }));
+    const touched = new Set(watch.takeRecords().map((r) => (r.target as HTMLElement).dataset.word));
+    expect([...touched]).toEqual(["18:10:1"]);
+    const words = [...root.querySelectorAll<HTMLElement>(".w")];
+    expect(words[0].className).toBe("w");
+    expect(words[0].getAttribute("aria-label")).toBe("ذهب");
+    expect(words[1].classList.contains("m-hid")).toBe(true);
+    watch.disconnect();
+  });
+
+  it("paints everything again when the page was drawn anew", () => {
+    const root = page();
+    const m = hearChunk(startMemorise(WORDS), "ذهب الولد");
+    paintMemorise(root, session({ m }));
+    const html = root.innerHTML;
+    root.innerHTML = html.replace(/ m-hid| m-diff|tabindex="-1"/g, "");
+    expect(root.querySelectorAll(".m-hid, .m-diff").length).toBe(0);
+    paintMemorise(root, session({ m }));
+    const words = [...root.querySelectorAll<HTMLElement>(".w")];
+    expect(words[1].classList.contains("m-diff")).toBe(true);
+    expect(words[2].classList.contains("m-hid")).toBe(true);
+    expect(words[2].getAttribute("aria-label")).toBe("Hidden word");
+    expect(words[2].getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("repaints a word whose mark was taken off from outside", () => {
+    const root = page();
+    paintMemorise(root, session());
+    root.querySelector('[data-word="18:10:2"]')?.classList.remove("m-hid");
+    paintMemorise(root, session());
+    expect(root.querySelector('[data-word="18:10:2"]')?.classList.contains("m-hid")).toBe(true);
+  });
+
+  it("gives every word back, labels and tab stops too, when the page is turned away from", () => {
+    const root = page();
+    paintMemorise(root, session({ m: hearChunk(startMemorise(WORDS), "ذهب الولد") }));
+    paintMemorise(root, session({ phase: "left" }));
+    expect(root.querySelectorAll(".m-hid, .m-diff").length).toBe(0);
+    expect(root.querySelector('[data-word="18:10:3"]')?.getAttribute("aria-label")).toBe("الى");
+    expect(root.querySelector('[data-word="18:10:3"]')?.hasAttribute("tabindex")).toBe(false);
+    paintMemorise(root, session());
+    expect(root.querySelectorAll(".m-hid").length).toBe(4);
   });
 
   it("lights an ayah found, and only a well-formed one", () => {

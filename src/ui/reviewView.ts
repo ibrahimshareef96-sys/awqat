@@ -14,6 +14,7 @@ import { hoursMinutes } from "./bodyView.ts";
 import { deviceWord } from "./deviceWord.ts";
 import { esc, icon } from "./html.ts";
 import { amountText } from "./moneyView.ts";
+import { sectionHead } from "./section.ts";
 
 export interface ReviewScreen {
   /** The last seven days' numbers (review/week.ts). */
@@ -88,14 +89,23 @@ function money(r: WeekReview): string {
   ]);
 }
 
-/** Each step is named over its cards, on the sky, as a screen's own headings are. */
-const stepTitle = (n: number, name: string): string => `<h2 class="label step-title">${n} · ${esc(name.toUpperCase())}</h2>`;
+/** What each of the four steps is, in one plain line under its name. */
+const STEP_ABOUT: Readonly<Record<number, string>> = {
+  1: "Your week in numbers, from your own records.",
+  2: "Three questions. Each is optional.",
+  3: "Up to three, short, for the week ahead.",
+  4: "The next seven days.",
+};
+
+/** Each step is named large over its cards, on the sky, with which step it is and what it is for. */
+const stepTitle = (n: number, name: string): string =>
+  sectionHead(name, STEP_ABOUT[n] ?? "", { step: `Step ${n} of 4` });
 
 /** Step 2: the three questions, each optional. */
 function reflect(m: ReviewScreen): string {
   const where = m.syncs ? `stays on this ${deviceWord()}, and on your other devices through your own server`
     : `stays on this ${deviceWord()}`;
-  return `${stepTitle(2, "Reflect")}<section class="card stack"><p class="small">Each is optional. What you write ${esc(where)}.</p>` +
+  return `${stepTitle(2, "Reflect")}<section class="card stack"><p class="small">What you write ${esc(where)}.</p>` +
     PROMPT_KEYS.map((k) => `<label class="prompt" for="rv-${k}">${esc(PROMPTS[k])}</label><textarea id="rv-${k}" class="field area" ` +
       `name="${k}" rows="3" maxlength="${REFLECTION_MAX}">${esc(m.form[k])}</textarea>`).join("") + `</section>`;
 }
@@ -105,8 +115,8 @@ function intentions(m: ReviewScreen): string {
   const fields = Array.from({ length: INTENTIONS_MAX }, (_, i) => `<label class="small" for="rv-i${i + 1}">Intention ${i + 1}</label>` +
     `<input id="rv-i${i + 1}" class="field" name="intention" maxlength="${INTENTION_MAX}" autocomplete="off" ` +
     `value="${esc(m.form.intentions[i] ?? "")}">`).join("");
-  return `${stepTitle(3, "Intentions")}<section class="card stack"><p class="small">Up to three, short, for the week ahead. ` +
-    `They stay on Home, where you can tick each one.${m.talk ? " When you talk to the assistant, it hears them too." : ""}` +
+  return `${stepTitle(3, "Intentions")}<section class="card stack"><p class="small">` +
+    `Your intentions stay on Home, where you can tick each one.${m.talk ? " When you talk to the assistant, it hears them too." : ""}` +
     `</p>${fields}</section>`;
 }
 
@@ -118,7 +128,8 @@ function ahead(m: ReviewScreen): string {
 
 function history(m: ReviewScreen): string {
   if (m.past.length === 0) return "";
-  return `<section class="card" aria-label="Past reviews"><h2 class="label">PAST REVIEWS</h2><ul class="plain past-list">${m.past.map((p) =>
+  return `${sectionHead("Past reviews", "The weeks you kept. Tap one to read it back.")}` +
+    `<section class="card" aria-label="Past reviews"><ul class="plain past-list">${m.past.map((p) =>
     `<li><button type="button" class="note-row row-item" data-action="review-past" data-value="${esc(p.week)}"><span class="col">` +
     `<span class="title">${esc(weekLabel(p.week))}</span><span class="small">${esc(p.line)}</span></span></button></li>`).join("")}` +
     `</ul></section>`;

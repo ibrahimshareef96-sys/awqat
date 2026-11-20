@@ -4,7 +4,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/recite/engine.ts", () => ({
-  prepare: vi.fn(), hear: vi.fn(), find: vi.fn(), isReady: vi.fn(), release: vi.fn(),
+  prepare: vi.fn(), hear: vi.fn(), find: vi.fn(), isReady: vi.fn(), release: vi.fn(), releaseWhenIdle: vi.fn(),
+  keepWarm: vi.fn(),
 }));
 vi.mock("../src/recite/mic.ts", () => ({ startCapture: vi.fn() }));
 vi.mock("../src/recite/assets.ts", () => ({
@@ -24,6 +25,7 @@ import { FRAME } from "../src/recite/audio.ts";
 import { startMemorise } from "../src/recite/align.ts";
 import type { MushafWord } from "../src/quran/mushafPage.ts";
 import { closedFind } from "../src/recite/session.ts";
+import { memoriseBar } from "../src/ui/reciteView.ts";
 import { hooks, state } from "../src/app/state.ts";
 import * as recite from "../src/app/reciteActions.ts";
 
@@ -73,6 +75,8 @@ beforeEach(() => {
   vi.mocked(engine.find).mockReset().mockResolvedValue(FOUND);
   vi.mocked(engine.isReady).mockReset().mockReturnValue(true);
   vi.mocked(engine.release).mockReset();
+  vi.mocked(engine.releaseWhenIdle).mockReset();
+  vi.mocked(engine.keepWarm).mockReset();
   vi.mocked(assets.reciteFiles).mockReset().mockResolvedValue(READY);
   vi.mocked(assets.downloadReciteFiles).mockReset().mockResolvedValue({ ok: true });
   vi.mocked(assets.markReady).mockClear();
@@ -801,13 +805,293 @@ describe("memorising a page", () => {
     expect(recite.memorising()).toBe(false);
   });
 
-  it("ends, and lets the model go, when the reader closes", async () => {
+  it("ends, stops the microphone at once, and lets the model go only after the idle time, when the reader closes", async () => {
     void recite.startMemorising();
     await flush();
     recite.leaveReader();
     expect(state.memorise).toBeNull();
     expect(captures[0].stop).toHaveBeenCalled();
+    expect(engine.releaseWhenIdle).toHaveBeenCalledTimes(1);
+    expect(engine.release).not.toHaveBeenCalled();
+  });
+
+  it("does not wait to let the model go when the reader closes under the recite sheet's own use", async () => {
+    state.sheet = "recite";
+    recite.leaveReader();
+    expect(engine.releaseWhenIdle).not.toHaveBeenCalled();
+    expect(engine.release).not.toHaveBeenCalled();
+  });
+
+  it("opens again within the idle time with the model already loaded, and the microphone on only while listening", async () => {
+    void recite.startMemorising();
+    await flush();
+    recite.leaveReader();
+    expect(captures[0].stop).toHaveBeenCalled();
+    recite.afterReaderDraw(document);
+    expect(engine.keepWarm).toHaveBeenCalled();
+    void recite.startMemorising();
+    await flush();
+    expect(engine.prepare).toHaveBeenCalledTimes(2);
+    expect(engine.release).not.toHaveBeenCalled();
+    expect(state.memorise?.phase).toBe("listening");
+    expect(captures).toHaveLength(2);
+    expect(captures[1].stop).not.toHaveBeenCalled();
+  });
+
+  it("loads afresh when the reader opens after the idle time has let the model go", async () => {
+    void recite.startMemorising();
+    await flush();
+    recite.leaveReader();
+    // The engine lets it go on its own timer (tested there): from here the model is simply not ready.
+    vi.mocked(engine.isReady).mockReturnValue(false);
+    void recite.startMemorising();
+    await flush();
+    expect(engine.prepare).toHaveBeenCalledTimes(2);
+    expect(state.memorise?.phase).toBe("listening");
+  });
+
+  it("still lets the model go at once when a hearing fails, and when the download is removed", async () => {
+    vi.mocked(engine.hear).mockResolvedValueOnce(null);
+    void recite.startMemorising();
+    await flush();
+    recitePhrase();
+    await flush();
+    expect(engine.release).toHaveBeenCalledTimes(1);
+    await recite.removeDownload();
+    expect(engine.release).toHaveBeenCalledTimes(2);
+    expect(engine.releaseWhenIdle).not.toHaveBeenCalled();
+  });
+});
+
+describe("memorising, painted in place", () => {
+  function recitePhrase(): void {
+    for (let i = 0; i < 5; i++) sendFrame(loud());
+    for (let i = 0; i < 7; i++) sendFrame(quiet());
+  }
+
+  /** The page as the reader draws it for these words, with the bar the session has now. */
+  function drawReader(pages: number[] = [294]): void {
+    const session = state.memorise;
+    if (!session) throw new Error("no session");
+    const half = WORDS.length / pages.length;
+    const sections = pages.map((page, p) => `<section data-page="${page}">${WORDS.slice(p * half, (p + 1) * half).map((w) =>
+      `<button class="w" data-word="${w.key}" aria-label="${w.key}">x</button>`).join("")}</section>`).join("");
+    document.getElementById("app")!.innerHTML = `<main class="reader">${sections}${memoriseBar(session)}</main>`;
+    recite.afterReaderDraw(document);
+    vi.mocked(hooks.render).mockClear();
+    vi.mocked(hooks.renderOverlay).mockClear();
+  }
+
+  const line = (): string => document.querySelector("[data-memorise-line]")?.textContent ?? "";
+  const word = (n: number): HTMLElement => document.querySelector(`[data-word="18:10:${n}"]`) as HTMLElement;
+
+  async function listening(pages: number[] = [294]): Promise<void> {
+    vi.mocked(mushaf.pagesInView).mockReturnValue(pages);
+    vi.mocked(mushaf.pageWords).mockImplementation((page) => {
+      const half = WORDS.length / pages.length;
+      const p = pages.indexOf(page);
+      return { words: WORDS.slice(p * half, (p + 1) * half), at: new Map() };
+    });
+    void recite.startMemorising();
+    await flush();
+    expect(state.memorise?.phase).toBe("listening");
+    drawReader(pages);
+  }
+
+  it("shows a stretch being heard, and then its words, without drawing the page again", async () => {
+    await listening();
+    const heard = deferred<string>();
+    vi.mocked(engine.hear).mockReturnValueOnce(heard.promise);
+    const bar = document.querySelector("[data-memorise-bar]");
+    const first = word(1);
+    recitePhrase();
+    await flush();
+    expect(state.memorise?.working).toBe(1);
+    expect(line()).toBe("Filling in what you said…");
+    heard.resolve("ذهب الرجل");
+    await flush();
+    expect(state.memorise?.working).toBe(0);
+    expect(line()).toBe("Listening. Start anywhere.");
+    expect(first.classList.contains("m-hid")).toBe(false);
+    expect(first.getAttribute("aria-label")).toBe("18:10:1");
+    expect(word(2).classList.contains("m-hid")).toBe(false);
+    expect(word(3).classList.contains("m-hid")).toBe(true);
+    expect(word(3).getAttribute("aria-label")).toBe("Hidden word");
+    expect(document.querySelector("[data-memorise-bar]")).toBe(bar);
+    expect(word(1)).toBe(first);
+    expect(hooks.render).not.toHaveBeenCalled();
+  });
+
+  it("changes only the words whose mark changed", async () => {
+    await listening();
+    const seen: MutationRecord[] = [];
+    const watch = new MutationObserver((records) => seen.push(...records));
+    watch.observe(document.body, { attributes: true, subtree: true, attributeFilter: ["class", "aria-label", "tabindex"] });
+    recitePhrase();
+    await flush();
+    seen.push(...watch.takeRecords());
+    const touched = new Set(seen.map((r) => (r.target as HTMLElement).dataset.word).filter(Boolean));
+    expect([...touched].sort()).toEqual(["18:10:1", "18:10:2"]);
+    watch.disconnect();
+  });
+
+  it("paints both pages of a spread in place", async () => {
+    await listening([293, 294]);
+    recitePhrase();
+    await flush();
+    expect(word(1).classList.contains("m-hid")).toBe(false);
+    expect(word(2).classList.contains("m-hid")).toBe(false);
+    expect(word(3).classList.contains("m-hid")).toBe(true);
+    expect(hooks.render).not.toHaveBeenCalled();
+  });
+
+  it("marks every word in and turns Peek and listen off, in place, when the last words come", async () => {
+    await listening();
+    vi.mocked(engine.hear).mockResolvedValueOnce("ذهب الرجل الى السوق");
+    recitePhrase();
+    await flush();
+    expect(line()).toBe("Every word is in. Tap Done.");
+    expect((document.querySelector('[data-action="memorise-peek"]') as HTMLButtonElement).disabled).toBe(true);
+    expect((document.querySelector('[data-action="memorise-toggle"]') as HTMLButtonElement).disabled).toBe(true);
+    expect(hooks.render).not.toHaveBeenCalled();
+  });
+
+  it("drops a stretch answered after the session ended, painting nothing", async () => {
+    await listening();
+    const heard = deferred<string>();
+    vi.mocked(engine.hear).mockReturnValueOnce(heard.promise);
+    recitePhrase();
+    await flush();
+    recite.endMemorising();
+    vi.mocked(hooks.render).mockClear();
+    heard.resolve("ذهب الرجل");
+    await flush();
+    expect(state.memorise).toBeNull();
+    expect(hooks.render).not.toHaveBeenCalled();
+    expect(word(1).classList.contains("m-hid")).toBe(true);
+  });
+
+  it("draws in full, and paints no word, for a stretch answered once the page was turned away", async () => {
+    await listening();
+    const heard = deferred<string>();
+    vi.mocked(engine.hear).mockReturnValueOnce(heard.promise);
+    recitePhrase();
+    await flush();
+    vi.mocked(mushaf.pagesInView).mockReturnValue([300]);
+    vi.mocked(hooks.render).mockClear();
+    heard.resolve("ذهب الرجل");
+    await flush();
+    expect(hooks.render).toHaveBeenCalled();
+    expect(word(1).classList.contains("m-hid")).toBe(true);
+    expect(state.memorise?.m.marks.slice(0, 2)).toEqual(["said", "said"]);
+  });
+
+  it("brings the summary up to date when Done was pressed while a stretch was still being heard", async () => {
+    await listening();
+    const heard = deferred<string>();
+    vi.mocked(engine.hear).mockReturnValueOnce(heard.promise);
+    recitePhrase();
+    await flush();
+    recite.finishMemorising();
+    expect(state.sheet).toBe("memorise-done");
+    vi.mocked(hooks.render).mockClear();
+    vi.mocked(hooks.renderOverlay).mockClear();
+    heard.resolve("ذهب الرجل");
+    await flush();
+    expect(state.memorise?.working).toBe(0);
+    expect(state.memorise?.m.marks.slice(0, 2)).toEqual(["said", "said"]);
+    expect(hooks.renderOverlay).toHaveBeenCalled();
+    expect(hooks.render).not.toHaveBeenCalled();
+  });
+
+  it("hears what was being said when paused, in place, and listens again on resume with a full draw", async () => {
+    await listening();
+    const heard = deferred<string>();
+    vi.mocked(engine.hear).mockReturnValueOnce(heard.promise);
+    for (let i = 0; i < 8; i++) sendFrame(loud());
+    void recite.toggleListening();
+    expect(state.memorise?.phase).toBe("paused");
+    expect(engine.hear).toHaveBeenCalledTimes(1);
+    expect(hooks.render).toHaveBeenCalled();
+    vi.mocked(hooks.render).mockClear();
+    drawReader();
+    heard.resolve("ذهب");
+    await flush();
+    expect(word(1).classList.contains("m-hid")).toBe(false);
+    expect(hooks.render).not.toHaveBeenCalled();
+    await recite.toggleListening();
+    expect(state.memorise?.phase).toBe("listening");
+    expect(hooks.render).toHaveBeenCalled();
+  });
+
+  it("still stops and says so, with a full draw, when the model failed on a stretch", async () => {
+    await listening();
+    vi.mocked(engine.hear).mockResolvedValueOnce(null);
+    recitePhrase();
+    await flush();
+    expect(state.memorise).toMatchObject({ phase: "paused", problem: "model", working: 0 });
+    expect(hooks.render).toHaveBeenCalled();
+  });
+
+  it("moves the level meter with the voice while listening, and not after listening stopped", async () => {
+    await listening();
+    const fill = document.querySelector<HTMLElement>(".memorise-level span")!;
+    sendFrame(quiet());
+    const quietLevel = fill.style.transform;
+    sendFrame(loud());
+    expect(quietLevel).toBe("scaleX(0.000)");
+    expect(fill.style.transform).toBe("scaleX(1.000)");
+    expect(hooks.render).not.toHaveBeenCalled();
+    recite.appAway(false);
+    drawReader();
+    const resting = document.querySelector<HTMLElement>(".memorise-level span")!;
+    resting.style.transform = "scaleX(0.500)";
+    sendFrame(loud());
+    expect(resting.style.transform).toBe("scaleX(0.500)");
+  });
+
+  it("brings the bar to what the state says when the page's own HTML did not change", async () => {
+    await listening();
+    state.memorise = { ...state.memorise!, working: 1 };
+    recite.afterReaderDraw(document);
+    expect(line()).toBe("Filling in what you said…");
+  });
+});
+
+describe("recite to find, with the text read at the first search", () => {
+  it("takes the damaged download off the phone, and offers it again, when the text turns out missing", async () => {
+    vi.mocked(engine.find).mockResolvedValue("text");
+    void recite.openFind();
+    await flush();
+    for (let i = 0; i < 8; i++) sendFrame(loud());
+    recite.stopFind();
+    await flush();
+    expect(assets.removeReciteFiles).toHaveBeenCalledTimes(1);
     expect(engine.release).toHaveBeenCalled();
+    expect(state.recite).toMatchObject({ phase: "problem", problem: "damaged" });
+  });
+
+  it("lets go of a text failure that comes after the sheet closed, but still takes the files off", async () => {
+    const found = deferred<"text">();
+    vi.mocked(engine.find).mockReturnValue(found.promise);
+    void recite.openFind();
+    await flush();
+    for (let i = 0; i < 8; i++) sendFrame(loud());
+    recite.stopFind();
+    await flush();
+    state.sheet = null;
+    recite.sheetClosed();
+    found.resolve("text");
+    await flush();
+    expect(state.recite.phase).toBe("intro");
+    expect(assets.removeReciteFiles).not.toHaveBeenCalled();
+  });
+
+  it("memorises without the text ever being asked for", async () => {
+    void recite.startMemorising();
+    await flush();
+    expect(state.memorise?.phase).toBe("listening");
+    expect(engine.find).not.toHaveBeenCalled();
   });
 });
 

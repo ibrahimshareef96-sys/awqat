@@ -17,6 +17,7 @@ import { esc, icon, orb } from "./html.ts";
 import type { TurnStats } from "./pageTurn.ts";
 import { quranSummary } from "./quranView.ts";
 import { cover } from "./booksView.ts";
+import { sectionHead } from "./section.ts";
 import { modePrompts, type ModesModel } from "./modesView.ts";
 import { calendarsCard, homeAgendaCard, type AgendaModel } from "./agendaView.ts";
 import { homeBodyCard, type BodyModel } from "./bodyView.ts";
@@ -154,18 +155,32 @@ export function homeView(v: ViewModel): string {
     `<span class="col end">${prayerDots(v)}<span class="small">${done} of 5 today${until ? ` · ${until}` : ""}</span>` +
     `</span></button>${homeAdhkarCard(adhkarModel(v))}${homeWeekCard(v.week)}${homeAgendaCard(v.agenda)}${homeQuranCard(v)}${readingCard(v)}` +
     homeLearnCard(v.learn, v.date) + homeBodyCard(v.body) +
-    `<nav class="quiet-row" aria-label="More of your OS">${homeLinks(v.worker).map(([go, title]) =>
-      `<button type="button" class="quiet" data-go="${go}">${title}</button>`).join("")}</nav></main>` +
+    `${homeTiles(v.worker)}</main>` +
     chrome();
 }
 
-const HOME_LINKS: readonly (readonly [string, string])[] = [["modes", "Modes"], ["review", "Review"], ["books", "Books"], ["learn", "Learn"], ["agenda", "Agenda"],
-  ["body", "Body"], ["money", "Money"], ["work", "Work"], ["inbox", "Inbox"]];
+/** The rest of the OS: where each tile goes, its name, and one line on what is in it (34 characters at most). */
+const HOME_LINKS: readonly (readonly [string, string, string])[] = [
+  ["review", "Review", "Look back on your week"], ["modes", "Modes", "A view for the moment you are in"],
+  ["books", "Books", "What you are reading"], ["learn", "Learn", "Your tracks and lessons"],
+  ["agenda", "Agenda", "Your days between the prayers"], ["body", "Body", "Training, steps and sleep"],
+  ["money", "Money", "What came in, what is owed"], ["work", "Work", "Your projects and what waits"],
+  ["inbox", "Inbox", "What came in, sorted"]];
 /** Work and Inbox are read from the user's own server (docs/backend.md): without one they are not offered. */
 const SERVER_SCREENS = new Set(["work", "inbox"]);
 
-export const homeLinks = (worker: string): readonly (readonly [string, string])[] =>
+export const homeLinks = (worker: string): readonly (readonly [string, string, string])[] =>
   (worker ? HOME_LINKS : HOME_LINKS.filter(([go]) => !SERVER_SCREENS.has(go)));
+
+/**
+ * Home's way to every other screen: a tile each under one heading, with its name and what is in it. (They were small
+ * spaced words in a row at the foot of the page: hard to read, and nothing said what each one held.)
+ */
+export function homeTiles(worker: string): string {
+  const tiles = homeLinks(worker).map(([go, title, about]) => `<button type="button" class="tile" data-go="${go}">` +
+    `<span class="tile-name">${esc(title)}</span><span class="tile-about">${esc(about)}</span></button>`).join("");
+  return `${sectionHead("More", "The rest of your OS.")}<nav class="tiles" aria-label="More of your OS">${tiles}</nav>`;
+}
 
 /** Where the user stopped reading (the mushaf's bookmark, on every device), one tap from reading on. */
 export function homeQuranCard(v: Pick<ViewModel, "quran" | "date" | "bookmark" | "murajaah">): string {
@@ -385,7 +400,7 @@ export function settingsView(v: ViewModel, turn?: TurnStats): string {
     `<p class="small">${esc(statusLine(v))}</p><div class="row-buttons">` +
     (v.notify === "prompt" || v.notify === "denied" ? `<button type="button" class="pill" data-action="notify"${busy(v)}>Allow notifications</button>` : "") +
     (v.exact === "denied" ? `<button type="button" class="pill" data-action="exact"${busy(v)}>Exact times</button>` : "") +
-    `</div></section>${calendarsCard(v.agenda)}${voiceCard(v)}${reciteCard()}<p class="foot">Awqat 0.19, open source (MIT) · ` +
+    `</div></section>${calendarsCard(v.agenda)}${voiceCard(v)}${reciteCard()}<p class="foot">Awqat 0.2.0, open source (MIT) · ` +
     `prayer times by adhan-js (MIT) · Hijri date: Umm al-Qura · adhkar: Hisn al-Muslim, from Seen Arabic's set (MIT) · ` +
     `du'a after the salam: Hisn al-Muslim, from hisnmuslim.com · the adhkar's translation and transliteration: Hisn ` +
     `al-Muslim, fetched from hisnmuslim.com, and for the Quran items Saheeh International and the transliteration, ` +

@@ -1,6 +1,6 @@
 /**
  * The page's side of the speech worker: starts it when recitation is first used, asks it to hear and to find, and lets
- * it go when the reader closes (the model takes about 150 MB while it is loaded). Every question gets an answer: a
+ * it go a few minutes after the reader closes (the model takes about 150 MB while it is loaded). Every question gets an answer: a
  * worker that fails, while loading or after, or is let go, settles the load and whatever was waiting on it.
  */
 import type { FromWorker, LoadProblem, ToWorker } from "./messages.ts";
@@ -16,6 +16,10 @@ let settleLoad: ((ready: Ready) => void) | null = null;
 /** The model and the text are loaded in the running worker. */
 let loaded = false;
 let nextId = 1;
+/** How long the model stays loaded after the reader closes. */
+export const IDLE_MS = 3 * 60 * 1000;
+/** The wait before an idle model is let go; null when none is running. */
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
 const waiting = new Map<number, (message: FromWorker | null) => void>();
 
 /** The runtime shipped inside the app (vite.config.ts copies it), by its address next to the page. */
@@ -50,6 +54,7 @@ export const isReady = (): boolean => worker !== null && loaded;
 
 /** Starts the worker and loads the model and the text, once; later calls wait for the same load. */
 export function prepare(files: Extract<ReciteFiles, { ready: true }>): Promise<Ready> {
+  keepWarm();
   if (loading) return loading;
   const started = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
   worker = started;
@@ -100,15 +105,41 @@ export async function hear(audio: Float32Array): Promise<string | null> {
   return answer?.type === "heard" ? answer.text : null;
 }
 
-/** Which ayah the words belong to; null when the worker is gone or could not search. */
-export async function find(text: string): Promise<SearchResult | null> {
+/**
+ * Which ayah the words belong to; null when the worker is gone or could not search; "text" when the Quran text, read
+ * just now for this first search, was missing or not the text (the files are then damaged).
+ */
+export async function find(text: string): Promise<SearchResult | "text" | null> {
   const id = nextId++;
   const answer = await ask({ type: "find", id, text });
+  if (answer?.type === "text-failed") return "text";
   return answer?.type === "found" ? answer.result : null;
+}
+
+/** The reader is in use again: a model waiting out its idle time stays loaded. */
+export function keepWarm(): void {
+  if (idleTimer !== null) clearTimeout(idleTimer);
+  idleTimer = null;
+}
+
+/**
+ * The reader closed: the model stays loaded for a while, so opening it again is instant, and goes only when no one
+ * has used it for `ms`. Preparing again, or keepWarm, cancels the wait.
+ */
+export function releaseWhenIdle(ms: number = IDLE_MS): void {
+  keepWarm();
+  const waiting = worker;
+  if (!waiting) return;
+  idleTimer = setTimeout(() => {
+    idleTimer = null;
+    // Only the worker that was waiting: one started since is not this wait's to let go.
+    if (worker === waiting) release();
+  }, ms);
 }
 
 /** Lets the worker and the model go. Anything still waiting, the load included, gets its answer now. */
 export function release(): void {
+  keepWarm();
   worker?.terminate();
   worker = null;
   loaded = false;

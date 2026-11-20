@@ -8,6 +8,7 @@
 import { ownFile, sameOriginFetch } from "./sameOrigin.ts";
 import { env, pipeline } from "@huggingface/transformers";
 import type { FromWorker, ToWorker } from "./messages.ts";
+import { MODEL_RATE } from "./audio.ts";
 import { MODEL_FILES, MODEL_ID } from "./model.ts";
 import { buildIndex, searchRecitation, type SearchIndex } from "./search.ts";
 import { parseTanzil } from "./tanzil.ts";
@@ -18,6 +19,8 @@ type Hear = (audio: Float32Array, options: Record<string, never>) => Promise<{ t
 
 let hear: Hear | null = null;
 let index: SearchIndex | null = null;
+/** Where the Quran text is (a same-origin address checked at load); read only when a search first needs it. */
+let tanzilUrl: string | null = null;
 /** One message at a time: the model is not run twice at once. */
 let queue: Promise<void> = Promise.resolve();
 
@@ -48,6 +51,35 @@ async function checkFiles(base: string): Promise<"match" | "damaged" | "unread">
   return "match";
 }
 
+/** One run on a second of silence. A failure here only costs the first real stretch its speed, so it never fails the load. */
+async function warmUp(run: Hear): Promise<void> {
+  try {
+    await run(new Float32Array(MODEL_RATE), {});
+  } catch {
+    // Ignored on purpose: a real stretch is answered, or failed, on its own.
+  }
+}
+
+/**
+ * Reads the Quran text and builds the search index, once. "damaged": the file is not there or is not the text, so the
+ * download is no good. "unread": it could not be read or indexed this time (a read that failed, no memory to spare):
+ * the files may be fine, so they are kept and checked again at the next load.
+ */
+async function loadIndex(): Promise<"ok" | "damaged" | "unread"> {
+  if (index) return "ok";
+  if (!tanzilUrl) return "unread";
+  try {
+    const response = await fetch(tanzilUrl);
+    if (!response.ok) return response.status === 404 ? "damaged" : "unread";
+    const read = parseTanzil(await response.text());
+    if (!("verses" in read)) return "damaged";
+    index = buildIndex(read.verses);
+    return "ok";
+  } catch {
+    return "unread";
+  }
+}
+
 async function load(message: Extract<ToWorker, { type: "load" }>): Promise<void> {
   const here = self.location.href;
   const { mjs, wasm: binary } = message.runtime;
@@ -60,14 +92,10 @@ async function load(message: Extract<ToWorker, { type: "load" }>): Promise<void>
     const checked = await checkFiles(message.base);
     if (checked !== "match") return post({ type: "failed", why: checked === "damaged" ? "damaged" : "model" });
   }
-  try {
-    const text = await (await fetch(message.tanzil)).text();
-    const read = parseTanzil(text);
-    if (!("verses" in read)) return post({ type: "failed", why: "text" });
-    index = buildIndex(read.verses);
-  } catch {
-    return post({ type: "failed", why: "text" });
-  }
+  // The Quran text is only for "recite to find": it is read when the first search asks for it (loadIndex), so
+  // memorising never waits on it.
+  tanzilUrl = message.tanzil;
+  index = null;
   try {
     env.allowRemoteModels = false;
     env.allowLocalModels = true;
@@ -86,6 +114,8 @@ async function load(message: Extract<ToWorker, { type: "load" }>): Promise<void>
     wasm.proxy = false;
     const asr = await pipeline("automatic-speech-recognition", MODEL_ID, { dtype: "q8", device: "wasm" });
     hear = asr as unknown as Hear;
+    // The model's first run is its slowest: it is spent here, on silence, and not on the reciter's first words.
+    await warmUp(hear);
     post({ type: "ready", checked: true });
   } catch {
     post({ type: "failed", why: "model" });
@@ -104,7 +134,11 @@ async function handle(message: ToWorker): Promise<void> {
       return post({ type: "error", id: message.id });
     }
   }
-  if (!index) return post({ type: "error", id: message.id });
+  // Before any load there is no text to read: an error, as for any question the worker cannot answer.
+  if (!tanzilUrl) return post({ type: "error", id: message.id });
+  const read = await loadIndex();
+  if (read === "damaged") return post({ type: "text-failed", id: message.id });
+  if (read === "unread" || !index) return post({ type: "error", id: message.id });
   try {
     post({ type: "found", id: message.id, result: searchRecitation(index, message.text.slice(0, 2000)) });
   } catch {

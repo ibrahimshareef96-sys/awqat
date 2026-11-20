@@ -20,7 +20,7 @@ import { startCapture, type Capture } from "../recite/mic.ts";
 import { closedFind, type FindFlow, type MemoriseSession, type ReciteProblem } from "../recite/session.ts";
 import { pageOfAyah } from "../quran/pages.ts";
 import type { MushafWord } from "../quran/mushafPage.ts";
-import { paintFind, paintLit, paintMemorise } from "../ui/reciteView.ts";
+import { paintFind, paintLit, paintMemorise, paintMemoriseBar, paintMemoriseLevel } from "../ui/reciteView.ts";
 import { announce, hooks, setNotice, state } from "./state.ts";
 import * as mushaf from "./mushafActions.ts";
 
@@ -58,10 +58,28 @@ function setFind(change: Partial<FindFlow>): void {
   hooks.renderOverlay();
 }
 
+/** A change to the session that draws the reader again: every change of phase, and everything but a stretch heard. */
 function setMemorise(change: Partial<MemoriseSession>): void {
   if (!state.memorise) return;
   state.memorise = { ...state.memorise, ...change };
   hooks.render();
+}
+
+/**
+ * A stretch heard (`working` going up or down, words marked): the bar's line and the words whose mark changed are
+ * painted in place, and the page is not drawn again. A session whose page is out of view, or that left it, is drawn
+ * in full instead (afterReaderDraw then ends the listening), so nothing is painted on a page that is not there.
+ */
+function setMemoriseInPlace(change: Partial<MemoriseSession>): void {
+  const before = state.memorise;
+  if (!before) return;
+  const now = { ...before, ...change };
+  state.memorise = now;
+  if (now.phase === "left" || !inViewOf(now)) return hooks.render();
+  if (now.m !== before.m) paintMemorise(document, now);
+  paintMemoriseBar(document, now);
+  // The summary drawn over the page is brought up to date, as it was when the page was drawn again.
+  if (state.sheet === "memorise-done") hooks.renderOverlay();
 }
 
 /** Stops the microphone, and makes any start or frame still on its way from it count for nothing. */
@@ -211,11 +229,22 @@ async function finishFind(audio: Float32Array | null): Promise<void> {
   }
   const result = text ? await engine.find(text) : { kind: "short" as const };
   if (!current()) return;
+  if (result === "text") return textFailed();
   if (!result) {
     modelFailed();
     return setFind({ phase: "problem", problem: "model" });
   }
   setFind({ phase: "result", result });
+}
+
+/**
+ * The Quran text, read for the first search (it is not read to memorise), was missing or not the text: the download is
+ * taken off the phone, as when it was found damaged at the start, and the sheet offers it again.
+ */
+async function textFailed(): Promise<void> {
+  engine.release();
+  await removeReciteFiles();
+  if (state.sheet === "recite" && phaseNow() === "finding") setFind({ phase: "problem", problem: "damaged" });
 }
 
 /** Recite again: listens at once when the model is loaded, else loads it first (after a failure, say). */
@@ -284,17 +313,16 @@ async function beginMemorise(files: Ready): Promise<void> {
 
 async function heardStretch(audio: Float32Array, attempt: number): Promise<void> {
   if (!state.memorise || state.memorise.attempt !== attempt) return;
-  setMemorise({ working: state.memorise.working + 1 });
+  setMemoriseInPlace({ working: state.memorise.working + 1 });
   const text = await engine.hear(audio);
   const now = state.memorise;
   if (!now || now.attempt !== attempt) return;
   const working = Math.max(0, now.working - 1);
-  if (text === null) {
-    // The model failed on it: listening stops and says so, rather than filling nothing in without a word.
-    if (now.phase === "listening") stopMic();
-    modelFailed();
-    state.memorise = { ...now, working, problem: "model", phase: now.phase === "listening" ? "paused" : now.phase };
-  } else state.memorise = { ...now, m: text ? hearChunk(now.m, text) : now.m, working };
+  if (text !== null) return setMemoriseInPlace({ m: text ? hearChunk(now.m, text) : now.m, working });
+  // The model failed on it: listening stops and says so, rather than filling nothing in without a word.
+  if (now.phase === "listening") stopMic();
+  modelFailed();
+  state.memorise = { ...now, working, problem: "model", phase: now.phase === "listening" ? "paused" : now.phase };
   hooks.render();
   // The summary drawn while this stretch was being heard is brought up to date.
   if (state.sheet === "memorise-done") hooks.renderOverlay();
@@ -320,6 +348,8 @@ async function listenMemorise(): Promise<void> {
       if (mine !== run) return;
       const out = hearFrame(heard, frame, MEMORISE_CUT);
       heard = out.state;
+      // Painted in place at once, as the sound comes in (never from a start that was let go: `mine` is checked above).
+      paintMemoriseLevel(document, level(frame));
       if (out.stretch) void heardStretch(out.stretch, attempt);
     });
     if (mine !== run) return started.stop();
@@ -446,6 +476,8 @@ export function backToPage(): void {
  * and an ayah just found is lit.
  */
 export function afterReaderDraw(root: ParentNode): void {
+  // The reader is open (again): a model waiting out its idle time stays, and waits afresh when the reader next closes.
+  engine.keepWarm();
   const session = state.memorise;
   const shown = session ? inViewOf(session) : false;
   // A change of phase is drawn after this draw has finished, never inside it.
@@ -461,6 +493,8 @@ export function afterReaderDraw(root: ParentNode): void {
     return;
   }
   paintMemorise(root, state.memorise);
+  // The bar may have been left as an earlier in-place paint made it, when the page's HTML did not change.
+  paintMemoriseBar(root, state.memorise);
   paintLit(root, state.reciteLit);
 }
 
@@ -485,11 +519,14 @@ export function appBack(): void {
   away = false;
 }
 
-/** The reader closed: the microphone and the speech model are let go, and a memorising is ended. */
+/**
+ * The reader closed: the microphone is stopped at once and a memorising is ended. The speech model stays loaded for
+ * a few minutes (engine.IDLE_MS), so opening the reader again is instant, and is let go only if it is not used by then.
+ */
 export function leaveReader(): void {
   stopMic();
   state.memorise = null;
-  if (state.sheet !== "recite") engine.release();
+  if (state.sheet !== "recite") engine.releaseWhenIdle();
 }
 
 /** The recite sheet closed: the microphone stops (the model stays loaded while the reader is open). */

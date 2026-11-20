@@ -58,7 +58,8 @@ daily goal, and a muraja'ah (revision) plan by juz. The whole mushaf can be down
 
 **Recite.** Tap the microphone in the mushaf, recite three or four words of any ayah, and its page opens with the ayah
 lit. Or tap Memorise under a page: its words go blank, keeping their places, and fill in as you recite; a word heard as
-another, or skipped, is marked, and the slips can be kept for revision. A Quran speech model runs on the phone after a
+another, or skipped, is marked, and the slips can be kept for revision. Memorise opens quickly: the model stays loaded
+for three minutes after you close the reader, and the page updates in place as you speak. A Quran speech model runs on the phone after a
 one-time download of about 45 MB, and nothing you recite leaves it. Words are checked, not tajweed. How it works:
 [docs/recitation.md](docs/recitation.md).
 

@@ -82,6 +82,91 @@ describe("the speech worker's readiness", () => {
   });
 });
 
+describe("keeping the model warm between reader visits", () => {
+  const loadModel = async (): Promise<FakeWorker> => {
+    const load = engine.prepare(FILES);
+    latest().say({ type: "ready", checked: true });
+    await load;
+    return latest();
+  };
+
+  afterEach(() => vi.useRealTimers());
+
+  it("waits three minutes before letting the model go", async () => {
+    vi.useFakeTimers();
+    expect(engine.IDLE_MS).toBe(3 * 60 * 1000);
+    const worker = await loadModel();
+    engine.releaseWhenIdle();
+    expect(engine.isReady()).toBe(true);
+    vi.advanceTimersByTime(engine.IDLE_MS - 1);
+    expect(worker.terminated).toBe(false);
+    expect(engine.isReady()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(worker.terminated).toBe(true);
+    expect(engine.isReady()).toBe(false);
+  });
+
+  it("is loaded already when the reader is opened again within the idle time", async () => {
+    vi.useFakeTimers();
+    const worker = await loadModel();
+    engine.releaseWhenIdle();
+    vi.advanceTimersByTime(engine.IDLE_MS - 1000);
+    await expect(engine.prepare(FILES)).resolves.toEqual({ ok: true });
+    expect(FakeWorker.made).toHaveLength(1);
+    vi.advanceTimersByTime(engine.IDLE_MS * 2);
+    expect(worker.terminated).toBe(false);
+    expect(engine.isReady()).toBe(true);
+  });
+
+  it("stays when the reader is only looked at again (keepWarm), and waits afresh the next time it closes", async () => {
+    vi.useFakeTimers();
+    const worker = await loadModel();
+    engine.releaseWhenIdle();
+    vi.advanceTimersByTime(engine.IDLE_MS - 1);
+    engine.keepWarm();
+    vi.advanceTimersByTime(engine.IDLE_MS * 2);
+    expect(worker.terminated).toBe(false);
+    engine.releaseWhenIdle();
+    vi.advanceTimersByTime(engine.IDLE_MS);
+    expect(worker.terminated).toBe(true);
+  });
+
+  it("loads afresh after the idle time has passed", async () => {
+    vi.useFakeTimers();
+    await loadModel();
+    engine.releaseWhenIdle();
+    vi.advanceTimersByTime(engine.IDLE_MS);
+    void engine.prepare(FILES);
+    expect(FakeWorker.made).toHaveLength(2);
+    expect(latest().terminated).toBe(false);
+  });
+
+  it("lets go at once when told to, and the old timer never touches a newer worker", async () => {
+    vi.useFakeTimers();
+    const first = await loadModel();
+    engine.releaseWhenIdle();
+    engine.release();
+    expect(first.terminated).toBe(true);
+    const second = await loadModel();
+    vi.advanceTimersByTime(engine.IDLE_MS * 2);
+    expect(second.terminated).toBe(false);
+  });
+
+  it("does nothing when no model is loaded", () => {
+    vi.useFakeTimers();
+    engine.releaseWhenIdle();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("says the text is damaged, apart from the model failing, when a search finds it so", async () => {
+    await loadModel();
+    const finding = engine.find("words");
+    latest().say({ type: "text-failed", id: latest().lastId() });
+    await expect(finding).resolves.toBe("text");
+    expect(engine.isReady()).toBe(true);
+  });
+});
+
 describe("a worker that fails", () => {
   it("settles a hearing and a search still waiting when it fails after loading", async () => {
     const load = engine.prepare(FILES);
